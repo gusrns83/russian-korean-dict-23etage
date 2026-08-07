@@ -55,6 +55,6 @@ for w, o in top.items():
 
 json.dump({"entries":out, "alias":alias,
            "credit":"변화형·강세 자료: OpenRussian.org (CC BY-SA 4.0)"},
-          open("../pwa/words.json","w",encoding="utf-8"), ensure_ascii=False, separators=(",",":"))
+          open("../words.json","w",encoding="utf-8"), ensure_ascii=False, separators=(",",":"))
 print("표제어:", len(out), " 굴절형 연결:", len(alias))
-print("파일 크기:", os.path.getsize("../pwa/words.json"), "바이트")
+print("파일 크기:", os.path.getsize("../words.json"), "바이트")
