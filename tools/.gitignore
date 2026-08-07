@@ -1,0 +1,8 @@
+# 원본 대용량 소스 (Badestrand/russian-dictionary + hermitdave/FrequencyWords)
+# build_list3000.py 실행 시 아래 URL에서 다시 받으면 된다.
+_src/
+ru_50k.txt
+nouns.csv
+verbs.csv
+adjectives.csv
+others.csv

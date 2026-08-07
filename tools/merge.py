@@ -1,7 +1,7 @@
 # OpenRussian 자료(강세·변화형) + 손으로 쓴 한국어 뜻풀이 → words.json
 import json, glob, os
 
-top = {e["w"]: e for e in json.load(open("top1000.json", encoding="utf-8"))}
+top = {e["w"]: e for e in json.load(open("top3000.json", encoding="utf-8"))}
 GENDER = {"m":"남성","f":"여성","n":"중성"}
 
 ko = {}
