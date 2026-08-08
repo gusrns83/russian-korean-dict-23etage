@@ -1,5 +1,51 @@
 // Vercel 서버리스 함수. 열쇠(API 키)를 서버에만 두고 대신 물어봐 주는 창구.
 // 환경 변수 ANTHROPIC_API_KEY 를 설정해야 한다.
+//
+// [공용 캐시] Redis(Upstash / Vercel KV)가 연동돼 있으면, AI로 한 번 찾은 낱말을
+// 서버에 저장해 두고 다음부터는 AI 호출 없이 즉시(무료로) 모두에게 돌려준다.
+// Redis가 없으면 캐시 없이 지금까지처럼 그대로 작동한다.
+
+// ── Redis REST (명령 배열을 그대로 보내는 Upstash 호환 방식) ──
+function redisEnv() {
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  return url && token ? { url, token } : null;
+}
+async function redisCmd(cmd) {
+  const env = redisEnv();
+  if (!env) return null; // 설정 안 됨 → 캐시 건너뜀
+  try {
+    const r = await fetch(env.url, {
+      method: "POST",
+      headers: { authorization: "Bearer " + env.token, "content-type": "application/json" },
+      body: JSON.stringify(cmd)
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && "result" in j ? j.result : null;
+  } catch (_) {
+    return null;
+  }
+}
+const norm = (s) => String(s || "").replace(/́/g, "").trim().toLowerCase();
+const cacheGet = (term) => redisCmd(["GET", "dict:" + norm(term)]);
+const cacheSet = (term, value) =>
+  redisCmd(["SET", "dict:" + norm(term), value, "EX", 31536000]); // 1년 보관
+
+// AI가 준 텍스트에서 JSON 객체만 뽑아낸다.
+function extractJson(text) {
+  const raw = String(text || "").replace(/```json|```/g, "").trim();
+  const s = raw.indexOf("{"), e = raw.lastIndexOf("}");
+  if (s < 0 || e < 0) return null;
+  try { return JSON.parse(raw.slice(s, e + 1)); } catch (_) { return null; }
+}
+// 저장해도 되는(제대로 찾은) 결과인지 확인.
+function worthCaching(obj) {
+  return obj && obj.found !== false && Array.isArray(obj.senses) && obj.senses.length > 0;
+}
+// 프런트가 기대하는 Anthropic 응답 모양으로 감싼다.
+const wrap = (jsonText) => ({ content: [{ type: "text", text: jsonText }] });
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 받습니다" });
 
@@ -8,6 +54,10 @@ export default async function handler(req, res) {
 
   const term = String((req.body && req.body.term) || "").trim().slice(0, 40);
   if (!term) return res.status(400).json({ error: "찾을 낱말이 없습니다" });
+
+  // 1) 공용 캐시 먼저 확인 — 있으면 AI를 부르지 않는다.
+  const hit = await cacheGet(term);
+  if (hit) return res.status(200).json({ ...wrap(hit), cached: true });
 
   const prompt = `너는 러시아어–한국어 학습 사전의 편찬자다. 찾는 말: "${term}"
 
@@ -46,6 +96,16 @@ export default async function handler(req, res) {
       })
     });
     const data = await r.json();
+    if (!r.ok) return res.status(r.status).json(data);
+
+    // 2) 제대로 찾은 결과라면 공용 캐시에 저장 (검색어 + 표제어 둘 다 키로).
+    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+    const obj = extractJson(text);
+    if (worthCaching(obj)) {
+      const clean = JSON.stringify(obj);
+      await cacheSet(term, clean);
+      if (obj.headword && norm(obj.headword) !== norm(term)) await cacheSet(obj.headword, clean);
+    }
     return res.status(r.status).json(data);
   } catch (e) {
     return res.status(502).json({ error: String(e) });
