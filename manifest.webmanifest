@@ -1,6 +1,6 @@
 {
-  "name": "러한사전",
-  "short_name": "러한사전",
+  "name": "조군 러한사전",
+  "short_name": "조군 러한사전",
   "description": "종이 사전처럼 뜻과 예문을 함께 보여 주는 러시아어–한국어 학습 사전",
   "lang": "ko",
   "start_url": "./index.html",
