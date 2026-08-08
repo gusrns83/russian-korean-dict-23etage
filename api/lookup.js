@@ -111,3 +111,5 @@ export default async function handler(req, res) {
     return res.status(502).json({ error: String(e) });
   }
 }
+
+// 배포 트리거: Redis 공용 캐시 환경변수 반영 (v1)
