@@ -185,6 +185,30 @@
     border:1px solid var(--red);background:transparent;color:var(--red);
     padding:4px 12px;border-radius:2px;cursor:pointer;margin-top:6px;
   }
+
+  /* ── 최근 찾은 낱말 ── */
+  .history{margin:-4px 0 14px;}
+  .history[hidden]{display:none;}
+  .history-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-family:"PT Sans Narrow",sans-serif;font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;
+  }
+  .history-head button{
+    border:0;background:transparent;cursor:pointer;
+    font-family:"PT Sans Narrow",sans-serif;font-size:11px;letter-spacing:.1em;color:var(--red);
+  }
+  .history-chips{
+    display:flex;gap:6px;overflow-x:auto;padding-bottom:3px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  }
+  .history-chips::-webkit-scrollbar{display:none;}
+  .history-chips button{
+    flex:0 0 auto;border:1px solid var(--rule);border-radius:2px;background:transparent;
+    cursor:pointer;padding:2px 9px;white-space:nowrap;
+    font-family:"Old Standard TT",serif;font-size:15px;color:var(--ink);
+  }
+  .history-chips button:hover,.history-chips button:focus{border-color:var(--red);color:var(--red);outline:none;}
 </style>
 </head>
 <body>
@@ -200,6 +224,11 @@
   </header>
 
   <div class="runhead"><span id="rh-l">—</span><span id="rh-r">учебный словарь</span></div>
+
+  <div class="history" id="history" hidden>
+    <div class="history-head"><span>최근 찾은 낱말</span><button id="hist-clear" type="button">지우기</button></div>
+    <div class="history-chips" id="history-chips"></div>
+  </div>
 
   <main id="out">
     <div class="msg">
@@ -265,6 +294,23 @@ const shelf = {
   get(w){ try{ const v=localStorage.getItem("ruko:"+w); return v?JSON.parse(v):null; }catch(_){ return null; } },
   put(w,o){ try{ localStorage.setItem("ruko:"+w, JSON.stringify(o)); }catch(_){} }
 };
+
+/* 찾은 낱말의 목록(최근 순)을 이 기기에 남겨 둔다 */
+const HKEY = "ruko:history";
+function histList(){ try{ return JSON.parse(localStorage.getItem(HKEY)||"[]"); }catch(_){ return []; } }
+function histAdd(w){
+  w=(w||"").trim(); if(!w) return;
+  let a=histList().filter(x=>x!==w); a.unshift(w); a=a.slice(0,24);
+  try{ localStorage.setItem(HKEY, JSON.stringify(a)); }catch(_){}
+  histRender();
+}
+function histClear(){ try{ localStorage.removeItem(HKEY); }catch(_){} histRender(); }
+function histRender(){
+  const a=histList(), box=$("#history"), chips=$("#history-chips");
+  if(!a.length){ box.hidden=true; return; }
+  chips.innerHTML=a.map(w=>`<button type="button" data-hist="${esc(w)}">${esc(w)}</button>`).join("");
+  box.hidden=false;
+}
 
 function linkify(text){
   return esc(text).split(/(\s+)/).map(tok=>{
@@ -398,6 +444,7 @@ function render(d, term, built){
       ${built?`<div class="credit">변화형·강세 자료 <a href="https://en.openrussian.org" target="_blank" rel="noopener">OpenRussian.org</a> · CC BY-SA 4.0</div>`:""}
     </article>`;
   setHead(d.headword||term);
+  histAdd(d.headword||term);
   $("#pageno").textContent = `— ${++page} —`;
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -405,7 +452,10 @@ function render(d, term, built){
 document.addEventListener("click",e=>{
   if(e.target.classList.contains("seed")) lookup(e.target.textContent);
   if(e.target.classList.contains("w")) lookup(e.target.dataset.w);
+  if(e.target.dataset && e.target.dataset.hist) lookup(e.target.dataset.hist);
 });
+$("#hist-clear").onclick = histClear;
+histRender();
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter" && e.target.classList.contains("w")) lookup(e.target.dataset.w);
 });
