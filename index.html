@@ -68,12 +68,13 @@
   /* ── 검색 ── */
   .search{display:flex;gap:0;margin:18px 0 4px;border-bottom:2px solid var(--ink);}
   .search input{
-    flex:1;border:0;background:transparent;outline:none;
+    flex:1;min-width:0;border:0;background:transparent;outline:none;
     font-family:"Old Standard TT",serif;font-size:22px;color:var(--ink);
     padding:6px 2px;
   }
   .search input::placeholder{color:#A79C82;font-style:italic;}
   .search button{
+    flex:0 0 auto;white-space:nowrap;
     border:0;background:transparent;cursor:pointer;
     font-family:"PT Sans Narrow",sans-serif;font-size:13px;letter-spacing:.14em;
     color:var(--red);padding:0 4px;
