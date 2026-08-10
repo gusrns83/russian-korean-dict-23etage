@@ -210,6 +210,25 @@
     font-family:"Old Standard TT",serif;font-size:15px;color:var(--ink);
   }
   .history-chips button:hover,.history-chips button:focus{border-color:var(--red);color:var(--red);outline:none;}
+
+  /* ── AI로 더 자세히 ── */
+  .deepen-wrap{margin:22px 0 2px;text-align:center;}
+  .deepen{
+    font-family:"PT Sans Narrow",sans-serif;font-size:14px;letter-spacing:.06em;
+    border:1px solid var(--red);background:transparent;color:var(--red);
+    padding:9px 20px;border-radius:2px;cursor:pointer;
+  }
+  .deepen:hover,.deepen:focus{background:var(--red);color:var(--paper);outline:none;}
+  .deepen:disabled{opacity:.5;cursor:default;}
+  .deepen-note{
+    font-family:"PT Sans Narrow",sans-serif;font-size:11px;letter-spacing:.04em;
+    color:var(--ink-soft);margin-top:7px;
+  }
+  .ai-badge{
+    font-family:"PT Sans Narrow",sans-serif;font-size:10.5px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--gilt);border:1px solid var(--gilt);
+    border-radius:2px;padding:1px 6px;margin-left:9px;vertical-align:middle;white-space:nowrap;
+  }
 </style>
 </head>
 <body>
@@ -379,35 +398,42 @@ async function lookup(term){
   const built = fromBook(term);
   if(built){ render(built, term, true); return; }
 
-  const saved = shelf.get(term);          // 전에 찾아본 낱말이면 바로 펼친다
-  if(saved){ render(saved, term); return; }
+  const saved = shelf.get(term);          // 전에 찾아본(=AI가 풀어 준) 낱말이면 바로 펼친다
+  if(saved){ render(saved, term, false, true); return; }
 
   if(!navigator.onLine){
     out.innerHTML='<div class="msg">이 사전에 아직 없는 낱말입니다. 인터넷이 연결되면 새 낱말도 찾아볼 수 있습니다.</div>';
     return;
   }
 
+  await runAI(term, "책장을 넘기는 중…");
+}
+
+/* AI(서버 창구)로 상세 뜻풀이를 받아 그린다. 결과는 서버에 자동 저장된다. */
+async function runAI(term, waitMsg){
   goEl.disabled=true; goEl.textContent="…";
-  out.innerHTML='<div class="msg">책장을 넘기는 중…</div>';
+  out.innerHTML=`<div class="msg">${esc(waitMsg||"AI가 더 자세히 풀어내는 중…")}</div>`;
   try{
     const data = await ask(term);
     let raw = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     raw = raw.replace(/```json|```/g,"").trim();
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
     const obj = JSON.parse(raw.slice(s, e+1));
-    shelf.put(term, obj);
-    if(obj.headword && obj.headword!==term) shelf.put(obj.headword, obj);
-    render(obj, term);
+    if(obj.found!==false){
+      shelf.put(term, obj);                 // 이 기기에도 남겨 둔다
+      if(obj.headword && obj.headword!==term) shelf.put(obj.headword, obj);
+    }
+    render(obj, term, false, obj.found!==false);
   }catch(err){
     console.error(err);
-    out.innerHTML='<div class="msg">찾지 못했습니다. 철자를 확인하고 다시 눌러 주세요.'
+    out.innerHTML='<div class="msg">AI 설명을 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.'
       +'<div style="font-size:12.5px;margin-top:6px;color:#8F8570">'+esc(err.message||err)+'</div></div>';
   }finally{
     goEl.disabled=false; goEl.textContent="찾기";
   }
 }
 
-function render(d, term, built){
+function render(d, term, built, ai){
   if(d.found===false){
     out.innerHTML=`<div class="msg">「${esc(term)}」은(는) 이 사전에 없습니다. ${esc(d.msg||"")}
       ${d.suggest?`<div style="margin-top:8px"><button class="seed">${esc(d.suggest)}</button></div>`:""}</div>`;
@@ -432,6 +458,7 @@ function render(d, term, built){
         <span class="word">${esc(d.stressed||d.headword)}</span>
         ${d.pron?`<span class="pron">[${esc(d.pron)}]</span>`:""}
         ${d.pos?`<span class="pos">${esc(d.pos)}</span>`:""}
+        ${ai?`<span class="ai-badge" title="AI가 풀어 쓴 상세 뜻풀이입니다">AI 상세</span>`:""}
       </div>
       ${d.gram?`<div class="gram">${esc(d.gram)}${d.pos_ko?` · ${esc(d.pos_ko)}`:""}</div>`:""}
       <ol class="senses">${senses}</ol>
@@ -442,6 +469,10 @@ function render(d, term, built){
         <dl class="forms">${d.forms.map(f=>`<dt>${esc(f.label)}</dt><dd>${esc(f.value)}</dd>`).join("")}</dl>
       </section>`:""}
       ${d.etym?`<section class="block"><h2>낱말의 뿌리</h2><div class="note">${esc(d.etym)}</div></section>`:""}
+      ${built&&navigator.onLine?`<div class="deepen-wrap">
+        <button class="deepen" data-deep="${esc(d.headword||term)}">✦ AI로 더 자세히 풀어보기</button>
+        <div class="deepen-note">더 많은 뜻·예문·관용구를 AI가 풀어 주고, 결과는 모두에게 저장됩니다.</div>
+      </div>`:""}
       ${built?`<div class="credit">변화형·강세 자료 <a href="https://en.openrussian.org" target="_blank" rel="noopener">OpenRussian.org</a> · CC BY-SA 4.0</div>`:""}
     </article>`;
   setHead(d.headword||term);
@@ -454,6 +485,7 @@ document.addEventListener("click",e=>{
   if(e.target.classList.contains("seed")) lookup(e.target.textContent);
   if(e.target.classList.contains("w")) lookup(e.target.dataset.w);
   if(e.target.dataset && e.target.dataset.hist) lookup(e.target.dataset.hist);
+  if(e.target.dataset && e.target.dataset.deep) runAI(e.target.dataset.deep);
 });
 $("#hist-clear").onclick = histClear;
 histRender();
