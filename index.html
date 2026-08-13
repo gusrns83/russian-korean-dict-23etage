@@ -229,6 +229,10 @@
     text-transform:uppercase;color:var(--gilt);border:1px solid var(--gilt);
     border-radius:2px;padding:1px 6px;margin-left:9px;vertical-align:middle;white-space:nowrap;
   }
+  .timing{
+    font-family:"PT Sans Narrow",sans-serif;font-size:11.5px;letter-spacing:.04em;
+    color:var(--ink-soft);margin:2px 0 8px;
+  }
 </style>
 </head>
 <body>
@@ -413,8 +417,10 @@ async function lookup(term){
 async function runAI(term, waitMsg){
   goEl.disabled=true; goEl.textContent="…";
   out.innerHTML=`<div class="msg">${esc(waitMsg||"AI가 더 자세히 풀어내는 중…")}</div>`;
+  const t0 = performance.now();
   try{
     const data = await ask(term);
+    const meta = { clientMs: Math.round(performance.now()-t0), serverMs: data.ms, cached: data.cached };
     let raw = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     raw = raw.replace(/```json|```/g,"").trim();
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
@@ -423,7 +429,7 @@ async function runAI(term, waitMsg){
       shelf.put(term, obj);                 // 이 기기에도 남겨 둔다
       if(obj.headword && obj.headword!==term) shelf.put(obj.headword, obj);
     }
-    render(obj, term, false, obj.found!==false);
+    render(obj, term, false, obj.found!==false, meta);
   }catch(err){
     console.error(err);
     out.innerHTML='<div class="msg">AI 설명을 불러오지 못했습니다. 잠시 후 다시 눌러 주세요.'
@@ -433,7 +439,15 @@ async function runAI(term, waitMsg){
   }
 }
 
-function render(d, term, built, ai){
+function timingLine(meta){
+  if(!meta) return "";
+  const sec = m => (Math.max(0,m)/1000).toFixed(1)+"초";
+  if(meta.cached) return `<div class="timing">⚡ 서버 캐시에서 즉시 · ${sec(meta.clientMs)}</div>`;
+  const svr = (typeof meta.serverMs==="number") ? ` · AI ${sec(meta.serverMs)}` : "";
+  return `<div class="timing">⚡ ${sec(meta.clientMs)}${svr}</div>`;
+}
+
+function render(d, term, built, ai, meta){
   if(d.found===false){
     out.innerHTML=`<div class="msg">「${esc(term)}」은(는) 이 사전에 없습니다. ${esc(d.msg||"")}
       ${d.suggest?`<div style="margin-top:8px"><button class="seed">${esc(d.suggest)}</button></div>`:""}</div>`;
@@ -461,6 +475,7 @@ function render(d, term, built, ai){
         ${ai?`<span class="ai-badge" title="AI가 풀어 쓴 상세 뜻풀이입니다">AI 상세</span>`:""}
       </div>
       ${d.gram?`<div class="gram">${esc(d.gram)}${d.pos_ko?` · ${esc(d.pos_ko)}`:""}</div>`:""}
+      ${timingLine(meta)}
       <ol class="senses">${senses}</ol>
       ${(d.idioms||[]).length?`<section class="block"><h2>관용 표현</h2>
         ${d.idioms.map(x=>`<div class="idiom"><div class="ex-ru">${linkify(x.ru)}</div><div class="ex-ko">${esc(x.ko)}</div></div>`).join("")}

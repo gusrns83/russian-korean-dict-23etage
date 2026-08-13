@@ -57,13 +57,13 @@ export default async function handler(req, res) {
 
   // 1) 공용 캐시 먼저 확인 — 있으면 AI를 부르지 않는다.
   const hit = await cacheGet(term);
-  if (hit) return res.status(200).json({ ...wrap(hit), cached: true });
+  if (hit) return res.status(200).json({ ...wrap(hit), cached: true, ms: 0 });
 
   const prompt = `너는 러시아어–한국어 학습 사전의 편찬자다. 찾는 말: "${term}"
 
 한국어로 입력되면 그에 해당하는 가장 대표적인 러시아어 낱말을 표제어로 삼는다.
 초·중급 학습자(청소년)가 읽을 수준으로, 예문은 짧고 쉽게.
-뜻은 자주 쓰이는 순서로 최대 4개, 각 뜻마다 예문 1~2개.
+뜻은 자주 쓰이는 순서로 최대 3개, 각 뜻마다 예문 1~2개.
 
 아래 JSON만 출력한다. 서문·마크다운·설명 없이 JSON 객체 하나만.
 {
@@ -82,6 +82,8 @@ export default async function handler(req, res) {
 낱말을 찾을 수 없으면 {"found":false,"suggest":"가장 비슷한 낱말","msg":"짧은 안내"}`;
 
   try {
+    // AI 호출에 걸린 시간을 재서 응답에 실어 보낸다(속도 측정용).
+    const t0 = Date.now();
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -91,11 +93,14 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 2000,
+        max_tokens: 1400,                    // 출력량 축소 → 생성 시간 단축
+        thinking: { type: "disabled" },       // 사전 추출엔 추론 불필요 → 지연 제거
+        output_config: { effort: "low" },     // 저강도 → 더 빠르게
         messages: [{ role: "user", content: prompt }]
       })
     });
     const data = await r.json();
+    const ms = Date.now() - t0;
     if (!r.ok) return res.status(r.status).json(data);
 
     // 2) 제대로 찾은 결과라면 공용 캐시에 저장 (검색어 + 표제어 둘 다 키로).
@@ -106,7 +111,7 @@ export default async function handler(req, res) {
       await cacheSet(term, clean);
       if (obj.headword && norm(obj.headword) !== norm(term)) await cacheSet(obj.headword, clean);
     }
-    return res.status(r.status).json(data);
+    return res.status(r.status).json({ ...data, ms });
   } catch (e) {
     return res.status(502).json({ error: String(e) });
   }
