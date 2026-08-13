@@ -233,6 +233,13 @@
     font-family:"PT Sans Narrow",sans-serif;font-size:11.5px;letter-spacing:.04em;
     color:var(--ink-soft);margin:2px 0 8px;
   }
+  .switch-src{margin:14px 0 2px;text-align:center;}
+  .switch-src button{
+    font-family:"PT Sans Narrow",sans-serif;font-size:12.5px;letter-spacing:.04em;
+    border:0;background:transparent;color:var(--ink-soft);cursor:pointer;
+    text-decoration:underline;text-underline-offset:3px;
+  }
+  .switch-src button:hover,.switch-src button:focus{color:var(--red);outline:none;}
 </style>
 </head>
 <body>
@@ -398,12 +405,14 @@ async function lookup(term){
   if(!term) return;
   qEl.value=term;
 
-  await bookReady;                        // 미리 만들어 둔 사전을 먼저 뒤진다
+  await bookReady;
   const built = fromBook(term);
-  if(built){ render(built, term, true); return; }
 
-  const saved = shelf.get(term);          // 전에 찾아본(=AI가 풀어 준) 낱말이면 바로 펼친다
-  if(saved){ render(saved, term, false, true); return; }
+  // AI로 찾아 둔 값이 있으면(=이 기기에 저장) 책 뜻풀이보다 먼저, 기본값으로 펼친다
+  const saved = shelf.get(term) || (built && shelf.get(built.headword));
+  if(saved && saved.found!==false){ render(saved, term, false, true); return; }
+
+  if(built){ render(built, term, true); return; }
 
   if(!navigator.onLine){
     out.innerHTML='<div class="msg">이 사전에 아직 없는 낱말입니다. 인터넷이 연결되면 새 낱말도 찾아볼 수 있습니다.</div>';
@@ -488,6 +497,9 @@ function render(d, term, built, ai, meta){
         <button class="deepen" data-deep="${esc(d.headword||term)}">✦ AI로 더 자세히 풀어보기</button>
         <div class="deepen-note">더 많은 뜻·예문·관용구를 AI가 풀어 주고, 결과는 모두에게 저장됩니다.</div>
       </div>`:""}
+      ${ai&&fromBook(d.headword||term)?`<div class="switch-src">
+        <button type="button" data-book="${esc(d.headword||term)}">책 뜻풀이 보기</button>
+      </div>`:""}
       ${built?`<div class="credit">변화형·강세 자료 <a href="https://en.openrussian.org" target="_blank" rel="noopener">OpenRussian.org</a> · CC BY-SA 4.0</div>`:""}
     </article>`;
   setHead(d.headword||term);
@@ -501,7 +513,14 @@ document.addEventListener("click",e=>{
   if(e.target.classList.contains("w")) lookup(e.target.dataset.w);
   if(e.target.dataset && e.target.dataset.hist) lookup(e.target.dataset.hist);
   if(e.target.dataset && e.target.dataset.deep) runAI(e.target.dataset.deep);
+  if(e.target.dataset && e.target.dataset.book) showBook(e.target.dataset.book);
 });
+
+/* AI 기본값 대신 책에 실린 원래 뜻풀이를 한 번 보여 준다(저장본은 그대로 유지) */
+function showBook(term){
+  const b = fromBook(term);
+  if(b) render(b, term, true);
+}
 $("#hist-clear").onclick = histClear;
 histRender();
 document.addEventListener("keydown",e=>{
