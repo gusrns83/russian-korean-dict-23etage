@@ -80,7 +80,35 @@
     color:var(--red);padding:0 4px;
   }
   .search button:disabled{color:#B0A691;cursor:default;}
-  .search .cam{font-size:17px;padding:0 6px;line-height:1;filter:grayscale(.2);}
+  .search .cam{font-size:17px;padding:0 5px;line-height:1;filter:grayscale(.2);}
+
+  /* ── 사진 구간 번역 오버레이 ── */
+  .shot{position:fixed;inset:0;z-index:50;background:rgba(20,18,14,.94);display:flex;flex-direction:column;}
+  .shot[hidden]{display:none;}
+  .shot-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;}
+  .shot-frame{position:relative;display:inline-block;line-height:0;touch-action:none;}
+  .shot-frame img{
+    display:block;max-width:100%;
+    max-height:calc(100vh - 74px - env(safe-area-inset-bottom));
+    user-select:none;-webkit-user-select:none;pointer-events:none;
+  }
+  .shot-sel{position:absolute;border:2px solid var(--gilt);background:rgba(168,135,63,.24);pointer-events:none;}
+  .shot-bar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    background:var(--paper);border-top:1px solid var(--rule);
+  }
+  .shot-bar button{
+    flex:0 0 auto;font-family:"PT Sans Narrow",sans-serif;font-size:15px;letter-spacing:.08em;
+    border:1px solid var(--red);background:transparent;color:var(--red);
+    padding:8px 18px;border-radius:2px;cursor:pointer;
+  }
+  .shot-bar #shot-go{background:var(--red);color:var(--paper);}
+  .shot-bar button:disabled{opacity:.4;cursor:default;}
+  #shot-hint{
+    flex:1;text-align:center;font-family:"PT Sans Narrow",sans-serif;
+    font-size:12px;color:var(--ink-soft);letter-spacing:.02em;
+  }
 
   /* ── 난외 표제 (running head) ── */
   .runhead{
@@ -279,10 +307,12 @@
     <div class="sub">Русско-корейский учебный словарь</div>
     <div class="search">
       <input id="q" type="text" placeholder="слово / 낱말" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-      <button id="cam" class="cam" type="button" title="사진으로 찾기" aria-label="사진으로 찾기">📷</button>
+      <button id="cam" class="cam" type="button" title="사진으로 낱말 찾기" aria-label="사진으로 낱말 찾기">📷</button>
+      <button id="trans" class="cam" type="button" title="사진 구간 번역" aria-label="사진 구간 번역">🖍️</button>
       <button id="go">찾기</button>
     </div>
     <input id="camfile" type="file" accept="image/*" capture="environment" hidden>
+    <input id="transfile" type="file" accept="image/*" capture="environment" hidden>
   </header>
 
   <div class="runhead"><span id="rh-l">—</span><span id="rh-r">учебный словарь</span></div>
@@ -314,6 +344,20 @@
 </div>
 
 <nav class="index" id="index" aria-label="자모 색인"></nav>
+
+<div class="shot" id="shot" hidden>
+  <div class="shot-stage">
+    <div class="shot-frame" id="shot-frame">
+      <img id="shot-img" alt="촬영한 사진">
+      <div class="shot-sel" id="shot-sel" hidden></div>
+    </div>
+  </div>
+  <div class="shot-bar">
+    <button id="shot-cancel" type="button">닫기</button>
+    <span id="shot-hint">번역할 구간을 사각형으로 그어 주세요</span>
+    <button id="shot-go" type="button" disabled>번역</button>
+  </div>
+</div>
 
 <script>
 /* ── 낱말을 물어볼 창구 ────────────────────────────────
@@ -652,6 +696,96 @@ async function runPhoto(file){
   }
 }
 
+/* ── 사진 구간 번역: 사진을 띄우고 사각형으로 구간 지정 → 잘라 번역 ── */
+const shotEl=$("#shot"), shotFrame=$("#shot-frame"), shotImgEl=$("#shot-img"), shotSel=$("#shot-sel");
+let selStart=null, selRect=null;
+
+async function pickForShot(file){
+  if(!navigator.onLine){ out.innerHTML='<div class="msg">구간 번역은 인터넷 연결이 필요합니다.</div>'; return; }
+  try{ openShot(await downscale(file, 1600)); }
+  catch(_){ out.innerHTML='<div class="msg">사진을 열지 못했습니다.</div>'; }
+}
+function openShot(dataUrl){
+  shotImgEl.src=dataUrl; shotSel.hidden=true; selStart=null; selRect=null;
+  $("#shot-go").disabled=true; $("#shot-hint").textContent="번역할 구간을 사각형으로 그어 주세요";
+  shotEl.hidden=false;
+}
+function closeShot(){ shotEl.hidden=true; shotImgEl.src=""; $("#transfile").value=""; }
+function frameXY(ev){
+  const r=shotFrame.getBoundingClientRect();
+  return { x:Math.min(Math.max(ev.clientX-r.left,0), r.width),
+           y:Math.min(Math.max(ev.clientY-r.top,0), r.height) };
+}
+function drawSel(x,y,w,h){ shotSel.style.left=x+"px"; shotSel.style.top=y+"px"; shotSel.style.width=w+"px"; shotSel.style.height=h+"px"; }
+shotFrame.addEventListener("pointerdown", ev=>{
+  ev.preventDefault(); shotFrame.setPointerCapture(ev.pointerId);
+  selStart=frameXY(ev); shotSel.hidden=false; drawSel(selStart.x,selStart.y,0,0);
+  $("#shot-go").disabled=true;
+});
+shotFrame.addEventListener("pointermove", ev=>{
+  if(!selStart) return; ev.preventDefault(); const p=frameXY(ev);
+  drawSel(Math.min(selStart.x,p.x), Math.min(selStart.y,p.y), Math.abs(p.x-selStart.x), Math.abs(p.y-selStart.y));
+});
+shotFrame.addEventListener("pointerup", ev=>{
+  if(!selStart) return; const p=frameXY(ev);
+  const x=Math.min(selStart.x,p.x), y=Math.min(selStart.y,p.y), w=Math.abs(p.x-selStart.x), h=Math.abs(p.y-selStart.y);
+  selStart=null;
+  if(w>16 && h>12){ selRect={x,y,w,h}; $("#shot-go").disabled=false; }
+  else { shotSel.hidden=true; selRect=null; $("#shot-go").disabled=true; }
+});
+
+async function runTranslate(){
+  if(!selRect) return;
+  const iw=shotImgEl.naturalWidth, ih=shotImgEl.naturalHeight;
+  const dw=shotImgEl.clientWidth, dh=shotImgEl.clientHeight;
+  const sx=selRect.x*iw/dw, sy=selRect.y*ih/dh, sw=selRect.w*iw/dw, sh=selRect.h*ih/dh;
+  const scale=Math.min(1, 1400/Math.max(sw,sh));   // 너무 크면 긴 변 1400로
+  const cw=Math.max(1,Math.round(sw*scale)), ch=Math.max(1,Math.round(sh*scale));
+  const c=document.createElement("canvas"); c.width=cw; c.height=ch;
+  c.getContext("2d").drawImage(shotImgEl, sx,sy,sw,sh, 0,0,cw,ch);
+  const b64=c.toDataURL("image/jpeg",0.85).split(",")[1];
+  closeShot();
+  goEl.disabled=true; goEl.textContent="…";
+  out.innerHTML='<div class="msg">구간을 번역하는 중…</div>'; window.scrollTo({top:0});
+  const t0=performance.now(); const stressReady=loadStressTable();
+  try{
+    const r=await fetch("./api/translate",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ media:"image/jpeg", image:b64 })});
+    const data=await r.json();
+    if(!data || !data.content) throw new Error((data&&data.error&&(data.error.message||data.error))||"응답이 없습니다");
+    let raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    raw=raw.replace(/```json|```/g,"").trim();
+    const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
+    const obj=JSON.parse(raw.slice(s, e+1));
+    await stressReady;
+    renderTranslation(obj, { clientMs:Math.round(performance.now()-t0), serverMs:data.ms });
+  }catch(err){
+    console.error(err);
+    out.innerHTML='<div class="msg">구간을 번역하지 못했습니다. 글자가 크고 선명하게 나오도록 다시 시도해 보세요.'
+      +'<div style="font-size:12.5px;margin-top:6px;color:#8F8570">'+esc(err.message||err)+'</div></div>';
+  }finally{ goEl.disabled=false; goEl.textContent="찾기"; }
+}
+
+function renderTranslation(d, meta){
+  if(d.found===false){
+    out.innerHTML=`<div class="msg">${esc(d.msg||"이 구간에서 러시아어를 읽지 못했습니다.")}</div>`;
+    setHead(""); return;
+  }
+  const ru=restress(d.ru||"");
+  out.innerHTML=`<article class="entry">
+    <div class="head"><span class="word">구간 번역</span><span class="ai-badge" title="AI 번역">AI 번역</span></div>
+    ${timingLine(meta)}
+    <div class="ex" style="margin-top:6px">
+      <div class="ex-ru">${linkify(ru)}</div>
+      <div class="ex-ko">${esc(d.ko||"")}</div>
+    </div>
+    <div class="deepen-note" style="margin-top:12px">원문 속 낱말을 누르면 사전에서 찾아볼 수 있어요.</div>
+  </article>`;
+  setHead("");
+  $("#pageno").textContent = `— ${++page} —`;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
 function timingLine(meta){
   if(!meta) return "";
   const sec = m => (Math.max(0,m)/1000).toFixed(1)+"초";
@@ -742,6 +876,10 @@ goEl.onclick=()=>lookup(qEl.value);
 qEl.addEventListener("keydown",e=>{if(e.key==="Enter")lookup(qEl.value);});
 $("#cam").onclick=()=>$("#camfile").click();
 $("#camfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) runPhoto(f); };
+$("#trans").onclick=()=>$("#transfile").click();
+$("#transfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) pickForShot(f); };
+$("#shot-cancel").onclick=closeShot;
+$("#shot-go").onclick=runTranslate;
 
 /* ── 연결 상태 ── */
 function connState(){
