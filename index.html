@@ -279,6 +279,42 @@
   }
   .shot-thumb.big{max-height:none;width:100%;cursor:zoom-out;}
 
+  /* ── 문법 진입 버튼 ── */
+  .quicknav{margin:2px 0 0;}
+  .quicknav button{
+    font-family:"PT Sans Narrow",sans-serif;font-size:13px;letter-spacing:.06em;
+    border:1px solid var(--rule);background:transparent;color:var(--ink-soft);
+    border-radius:2px;padding:5px 12px;cursor:pointer;
+  }
+  .quicknav button:hover,.quicknav button:focus{border-color:var(--red);color:var(--red);outline:none;}
+
+  /* ── 문법 섹션 ── */
+  .grammar{font-family:"Nanum Myeongjo",serif;color:var(--ink);line-height:1.7;}
+  .g-title{font-family:"Nanum Myeongjo",serif;font-size:22px;color:var(--red);margin:2px 0 14px;letter-spacing:.05em;}
+  .g-menu{list-style:none;padding:0;margin:0;}
+  .g-menu li{border-top:1px solid var(--rule);}
+  .g-menu li:first-child{border-top:0;}
+  .g-menu button{
+    width:100%;text-align:left;border:0;background:transparent;cursor:pointer;
+    padding:14px 2px;font-family:"Nanum Myeongjo",serif;font-size:17px;color:var(--ink);
+  }
+  .g-menu button:hover,.g-menu button:focus{color:var(--red);outline:none;}
+  .g-menu .g-sub{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:2px;font-family:"PT Sans Narrow",sans-serif;}
+  .g-back{border:0;background:transparent;color:var(--red);cursor:pointer;
+    font-family:"PT Sans Narrow",sans-serif;font-size:14px;letter-spacing:.04em;padding:0 0 8px;}
+  .grammar h2{font-family:"Nanum Myeongjo",serif;font-size:21px;color:var(--red);margin:4px 0 10px;letter-spacing:.03em;}
+  .grammar h3{font-family:"Nanum Myeongjo",serif;font-size:16px;color:var(--ink);margin:18px 0 6px;
+    border-bottom:1px solid var(--rule);padding-bottom:3px;}
+  .grammar p{margin:6px 0;font-size:15px;}
+  .grammar .tip{font-size:13px;color:var(--ink-soft);}
+  .g-table-wrap{overflow-x:auto;margin:8px 0;-webkit-overflow-scrolling:touch;}
+  .grammar table{border-collapse:collapse;width:100%;font-size:13.5px;}
+  .grammar th,.grammar td{border:1px solid var(--rule);padding:6px 8px;text-align:left;vertical-align:top;}
+  .grammar th{background:var(--paper-deep);font-family:"PT Sans Narrow",sans-serif;font-weight:700;
+    color:var(--ink-soft);white-space:nowrap;}
+  .g-ru{font-family:"Old Standard TT",serif;color:var(--ink);}
+  .g-diagram{display:block;max-width:340px;width:100%;height:auto;margin:10px auto;}
+
   /* 앱 버전 (왼쪽 아래 구석에 작게) */
   .ver{
     position:fixed;left:6px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:6;
@@ -332,6 +368,7 @@
     </div>
     <input id="camfile" type="file" accept="image/*" capture="environment" hidden>
     <input id="transfile" type="file" accept="image/*" capture="environment" hidden>
+    <div class="quicknav"><button id="grammar-btn" type="button">📖 러시아어 문법</button></div>
   </header>
 
   <div class="runhead"><span id="rh-l">—</span><span id="rh-r">учебный словарь</span></div>
@@ -363,7 +400,7 @@
 </div>
 
 <nav class="index" id="index" aria-label="자모 색인"></nav>
-<div class="ver" id="ver">v3</div>
+<div class="ver" id="ver">v4</div>
 
 <div class="shot" id="shot" hidden>
   <div class="shot-stage">
@@ -890,6 +927,179 @@ function render(d, term, built, ai, meta){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
+/* ── 러시아어 문법 섹션 ── */
+const PREP_SVG = `<svg class="g-diagram" viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="위치 전치사 그림">
+  <rect x="130" y="120" width="90" height="60" rx="3" fill="#E4DCC6" stroke="#23211C" stroke-width="2"/>
+  <text x="175" y="155" text-anchor="middle" font-family="'PT Sans Narrow',sans-serif" font-size="12" fill="#5F5947">я́щик</text>
+  <text x="175" y="169" text-anchor="middle" font-family="'PT Sans Narrow',sans-serif" font-size="11" fill="#5F5947">(상자)</text>
+  <circle cx="175" cy="70" r="9" fill="#8A2B22"/>
+  <text x="175" y="52" text-anchor="middle" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">над</tspan> 위(공중)</text>
+  <circle cx="175" cy="110" r="9" fill="#8A2B22"/>
+  <text x="232" y="106" text-anchor="start" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">на</tspan> 표면 위</text>
+  <circle cx="175" cy="150" r="8" fill="none" stroke="#8A2B22" stroke-width="2" stroke-dasharray="3 2"/>
+  <text x="175" y="200" text-anchor="middle" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">в</tspan> 안</text>
+  <circle cx="175" cy="228" r="9" fill="#8A2B22"/>
+  <text x="175" y="252" text-anchor="middle" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">под</tspan> 아래</text>
+  <circle cx="95" cy="205" r="9" fill="#8A2B22"/>
+  <text x="90" y="228" text-anchor="middle" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">пе́ред</tspan> 앞</text>
+  <circle cx="252" cy="95" r="9" fill="#8A2B22"/>
+  <text x="258" y="86" text-anchor="start" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">за</tspan> 뒤</text>
+  <circle cx="285" cy="150" r="9" fill="#8A2B22"/>
+  <text x="278" y="172" text-anchor="middle" font-family="serif" font-size="13" fill="#23211C"><tspan fill="#8A2B22">о́коло</tspan> 옆</text>
+</svg>`;
+
+const GRAMMAR = {
+ verb: { menu:"동사 변화", sub:"현재·과거·상·미래", html:`
+  <h2>동사 변화 (Спряже́ние)</h2>
+  <p>러시아어 동사는 인칭·수에 따라 어미가 바뀐다. 현재형은 두 가지 활용(제1식·제2식)이 있다.</p>
+  <h3>현재형 어미</h3>
+  <div class="g-table-wrap"><table>
+   <tr><th>인칭</th><th>제1식 (-е-) чита́ть</th><th>제2식 (-и-) говори́ть</th></tr>
+   <tr><td>я (나)</td><td class="g-ru">чита́ю</td><td class="g-ru">говорю́</td></tr>
+   <tr><td>ты (너)</td><td class="g-ru">чита́ешь</td><td class="g-ru">говори́шь</td></tr>
+   <tr><td>он / она́ (그/그녀)</td><td class="g-ru">чита́ет</td><td class="g-ru">говори́т</td></tr>
+   <tr><td>мы (우리)</td><td class="g-ru">чита́ем</td><td class="g-ru">говори́м</td></tr>
+   <tr><td>вы (당신들)</td><td class="g-ru">чита́ете</td><td class="g-ru">говори́те</td></tr>
+   <tr><td>они́ (그들)</td><td class="g-ru">чита́ют</td><td class="g-ru">говоря́т</td></tr>
+  </table></div>
+  <p class="tip">대체로 원형이 <span class="g-ru">-ить</span>면 제2식, 그 밖(-ать·-ять·-еть 등)은 제1식이 많다(예외 있음).</p>
+  <h3>과거형 — 주어의 성·수로 바뀜</h3>
+  <p>원형에서 <span class="g-ru">-ть</span>를 떼고 성·수 어미를 붙인다.</p>
+  <div class="g-table-wrap"><table>
+   <tr><th>성·수</th><th>чита́ть →</th><th>뜻</th></tr>
+   <tr><td>남성</td><td class="g-ru">чита́л</td><td>(그가) 읽었다</td></tr>
+   <tr><td>여성</td><td class="g-ru">чита́ла</td><td>(그녀가) 읽었다</td></tr>
+   <tr><td>중성</td><td class="g-ru">чита́ло</td><td>(그것이) 읽었다</td></tr>
+   <tr><td>복수</td><td class="g-ru">чита́ли</td><td>(그들이) 읽었다</td></tr>
+  </table></div>
+  <h3>상(вид): 불완료 ↔ 완료</h3>
+  <p>대부분의 동사는 짝을 이룬다. <b>불완료상</b>은 과정·반복, <b>완료상</b>은 완결·1회를 나타낸다.</p>
+  <p class="g-ru">писа́ть (불완료) ↔ написа́ть (완료)</p>
+  <h3>미래형</h3>
+  <p>불완료: <span class="g-ru">быть</span>의 미래 + 원형 → <span class="g-ru">Я бу́ду чита́ть.</span> (읽을 것이다)<br>
+  완료: 현재형 어미가 곧 미래 의미 → <span class="g-ru">Я напишу́.</span> (쓸 것이다)</p>
+ `},
+
+ case: { menu:"명사·형용사 격변화", sub:"6격의 쓰임과 어미", html:`
+  <h2>격변화 (Падежи́)</h2>
+  <p>러시아어는 문장에서의 역할에 따라 낱말 어미가 <b>6가지 격</b>으로 바뀐다.</p>
+  <div class="g-table-wrap"><table>
+   <tr><th>격</th><th>질문</th><th>기능</th><th>대표 전치사</th></tr>
+   <tr><td>주격 Имени́т.</td><td class="g-ru">кто?/что?</td><td>주어</td><td>—</td></tr>
+   <tr><td>생격 Роди́т.</td><td class="g-ru">кого́?/чего́?</td><td>소유·부정·수량</td><td class="g-ru">у, без, для, от, из</td></tr>
+   <tr><td>여격 Да́т.</td><td class="g-ru">кому́?/чему́?</td><td>받는 대상</td><td class="g-ru">к, по</td></tr>
+   <tr><td>대격 Вини́т.</td><td class="g-ru">кого́?/что?</td><td>직접목적어</td><td class="g-ru">в, на(방향), че́рез</td></tr>
+   <tr><td>조격 Твори́т.</td><td class="g-ru">кем?/чем?</td><td>수단·동반</td><td class="g-ru">с, над, под, за</td></tr>
+   <tr><td>전치격 Предло́ж.</td><td class="g-ru">о ком?/о чём?</td><td>장소·화제</td><td class="g-ru">в, на(위치), о</td></tr>
+  </table></div>
+  <h3>명사 격변화 (단수)</h3>
+  <div class="g-table-wrap"><table>
+   <tr><th>격</th><th>남성 стол</th><th>여성 кни́га</th><th>중성 окно́</th></tr>
+   <tr><td>주격</td><td class="g-ru">стол</td><td class="g-ru">кни́га</td><td class="g-ru">окно́</td></tr>
+   <tr><td>생격</td><td class="g-ru">стола́</td><td class="g-ru">кни́ги</td><td class="g-ru">окна́</td></tr>
+   <tr><td>여격</td><td class="g-ru">столу́</td><td class="g-ru">кни́ге</td><td class="g-ru">окну́</td></tr>
+   <tr><td>대격</td><td class="g-ru">стол</td><td class="g-ru">кни́гу</td><td class="g-ru">окно́</td></tr>
+   <tr><td>조격</td><td class="g-ru">столо́м</td><td class="g-ru">кни́гой</td><td class="g-ru">окно́м</td></tr>
+   <tr><td>전치격</td><td class="g-ru">(о) столе́</td><td class="g-ru">(о) кни́ге</td><td class="g-ru">(об) окне́</td></tr>
+  </table></div>
+  <p class="tip">* 남성 무생물의 대격 = 주격, 생물의 대격 = 생격.</p>
+  <h3>형용사 — 명사에 일치</h3>
+  <p>형용사는 꾸미는 명사의 <b>성·수·격</b>에 맞춰 어미가 바뀐다.</p>
+  <p class="g-ru">но́вый стол · но́вая кни́га · но́вое окно́ · но́вые кни́ги</p>
+ `},
+
+ number: { menu:"단수·복수 변화", sub:"복수 만들기 + 수사와 명사", html:`
+  <h2>단수 ↔ 복수 (Число́)</h2>
+  <h3>복수 만들기 (주격)</h3>
+  <div class="g-table-wrap"><table>
+   <tr><th>성 / 끝</th><th>복수 어미</th><th>예</th></tr>
+   <tr><td>남성 (자음)</td><td>+ы / +и</td><td class="g-ru">стол → столы́</td></tr>
+   <tr><td>여성 -а</td><td>-ы / -и</td><td class="g-ru">ка́рта → ка́рты</td></tr>
+   <tr><td>여성 -я</td><td>-и</td><td class="g-ru">неде́ля → неде́ли</td></tr>
+   <tr><td>중성 -о</td><td>-а</td><td class="g-ru">окно́ → о́кна</td></tr>
+   <tr><td>중성 -е</td><td>-я</td><td class="g-ru">мо́ре → моря́</td></tr>
+  </table></div>
+  <p class="tip">г·к·х·ж·ш·щ·ч 뒤에는 <span class="g-ru">ы</span> 대신 <span class="g-ru">и</span>.</p>
+  <p><b>불규칙:</b> <span class="g-ru">дом → дома́, го́род → города́, друг → друзья́, брат → бра́тья, ребёнок → де́ти, челове́к → лю́ди</span></p>
+  <h3>수사 + 명사 (아주 중요!)</h3>
+  <p>숫자에 따라 뒤 명사의 형태가 달라진다.</p>
+  <div class="g-table-wrap"><table>
+   <tr><th>숫자</th><th>명사 형태</th><th>예</th></tr>
+   <tr><td>1 (оди́н)</td><td>주격 단수</td><td class="g-ru">оди́н стол</td></tr>
+   <tr><td>2·3·4</td><td>생격 <b>단수</b></td><td class="g-ru">два стола́, три кни́ги</td></tr>
+   <tr><td>5 이상</td><td>생격 <b>복수</b></td><td class="g-ru">пять столо́в, де́сять книг</td></tr>
+  </table></div>
+  <p class="tip">* 끝자리가 1이면 다시 단수 규칙: <span class="g-ru">два́дцать оди́н стол</span> (21개).</p>
+ `},
+
+ prep: { menu:"위치를 나타내는 전치사", sub:"위·아래·앞·뒤 (상자 그림)", html:`
+  <h2>위치 전치사 (Где? 어디에)</h2>
+  <p>상자(<span class="g-ru">я́щик</span>)를 기준으로 공(●)이 어디 있는지로 익혀 보자.</p>
+  ${PREP_SVG}
+  <div class="g-table-wrap"><table>
+   <tr><th>전치사 + 격</th><th>뜻</th><th>예</th></tr>
+   <tr><td class="g-ru">в + 전치격</td><td>~ 안에</td><td class="g-ru">в я́щике</td></tr>
+   <tr><td class="g-ru">на + 전치격</td><td>~ 표면 위에</td><td class="g-ru">на столе́</td></tr>
+   <tr><td class="g-ru">над + 조격</td><td>~ 위(공중)에</td><td class="g-ru">над столо́м</td></tr>
+   <tr><td class="g-ru">под + 조격</td><td>~ 아래에</td><td class="g-ru">под столо́м</td></tr>
+   <tr><td class="g-ru">пе́ред + 조격</td><td>~ 앞에</td><td class="g-ru">пе́ред до́мом</td></tr>
+   <tr><td class="g-ru">за + 조격</td><td>~ 뒤에</td><td class="g-ru">за до́мом</td></tr>
+   <tr><td class="g-ru">о́коло / у + 생격</td><td>~ 옆·가까이에</td><td class="g-ru">о́коло стола́</td></tr>
+   <tr><td class="g-ru">ме́жду + 조격</td><td>~ 사이에</td><td class="g-ru">ме́жду столо́м и сту́лом</td></tr>
+   <tr><td class="g-ru">ря́дом с + 조격</td><td>~ 나란히 옆에</td><td class="g-ru">ря́дом со столо́м</td></tr>
+  </table></div>
+  <p class="tip">* 위치(где, 어디에)는 위 표대로. 방향(куда, 어디로)은 <span class="g-ru">в/на + 대격</span>: <span class="g-ru">в шко́лу</span>(학교로), <span class="g-ru">на рабо́ту</span>(직장으로).</p>
+ `},
+
+ motion: { menu:"기본 운동 동사", sub:"가다·오다 — 방향의 짝", html:`
+  <h2>운동 동사 (Глаго́лы движе́ния)</h2>
+  <p>러시아어 운동 동사는 <b>한 방향(지금·1회)</b>과 <b>여러 방향(왕복·반복·습관)</b>을 짝으로 구분한다.</p>
+  <div class="g-table-wrap"><table>
+   <tr><th>뜻</th><th>한 방향</th><th>여러 방향·반복</th></tr>
+   <tr><td>걸어가다</td><td class="g-ru">идти́</td><td class="g-ru">ходи́ть</td></tr>
+   <tr><td>(탈것) 가다</td><td class="g-ru">е́хать</td><td class="g-ru">е́здить</td></tr>
+   <tr><td>뛰다</td><td class="g-ru">бежа́ть</td><td class="g-ru">бе́гать</td></tr>
+   <tr><td>날다</td><td class="g-ru">лете́ть</td><td class="g-ru">лета́ть</td></tr>
+   <tr><td>헤엄쳐 가다</td><td class="g-ru">плыть</td><td class="g-ru">пла́вать</td></tr>
+   <tr><td>(들고) 나르다</td><td class="g-ru">нести́</td><td class="g-ru">носи́ть</td></tr>
+   <tr><td>(태워) 나르다</td><td class="g-ru">везти́</td><td class="g-ru">вози́ть</td></tr>
+  </table></div>
+  <p><b>한 방향</b> — 지금, 한 방향으로 진행:<br><span class="g-ru">Я иду́ в шко́лу.</span> (지금 학교에 가는 중이다)</p>
+  <p><b>여러 방향</b> — 왕복·반복·습관:<br><span class="g-ru">Я хожу́ в шко́лу ка́ждый день.</span> (매일 학교에 다닌다)</p>
+  <h3>접두사가 붙으면 방향이 정해진다</h3>
+  <div class="g-table-wrap"><table>
+   <tr><th>접두사</th><th>뜻</th><th>예 (идти́)</th></tr>
+   <tr><td class="g-ru">при-</td><td>도착</td><td class="g-ru">прийти́ (도착하다)</td></tr>
+   <tr><td class="g-ru">у-</td><td>떠남</td><td class="g-ru">уйти́ (떠나다)</td></tr>
+   <tr><td class="g-ru">в(о)-</td><td>들어감</td><td class="g-ru">войти́ (들어가다)</td></tr>
+   <tr><td class="g-ru">вы-</td><td>나옴</td><td class="g-ru">вы́йти (나가다)</td></tr>
+   <tr><td class="g-ru">по-</td><td>출발</td><td class="g-ru">пойти́ (가기 시작하다)</td></tr>
+  </table></div>
+ `}
+};
+
+function grammarMenu(){
+  setHead("");
+  out.innerHTML = `<div class="grammar">
+    <div class="g-title">📖 러시아어 문법</div>
+    <ul class="g-menu">
+      ${Object.keys(GRAMMAR).map(id=>`<li><button type="button" data-gram="${id}">${GRAMMAR[id].menu}<span class="g-sub">${GRAMMAR[id].sub}</span></button></li>`).join("")}
+    </ul>
+  </div>`;
+  $("#pageno").textContent = "— 문법 —";
+  window.scrollTo({top:0});
+}
+function grammarTopic(id){
+  const g = GRAMMAR[id]; if(!g) return;
+  setHead("");
+  out.innerHTML = `<div class="grammar">
+    <button class="g-back" type="button" data-gram-menu="1">‹ 문법 메뉴</button>
+    ${g.html}
+  </div>`;
+  $("#pageno").textContent = "— 문법 —";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
 document.addEventListener("click",e=>{
   if(e.target.classList.contains("seed")) lookup(e.target.textContent);
   if(e.target.classList.contains("w")) lookup(e.target.dataset.w);
@@ -897,6 +1107,9 @@ document.addEventListener("click",e=>{
   if(e.target.dataset && e.target.dataset.deep) runAI(e.target.dataset.deep);
   if(e.target.dataset && e.target.dataset.book) showBook(e.target.dataset.book);
   if(e.target.classList.contains("shot-thumb")){ e.target.classList.toggle("big"); return; }
+  const gram = e.target.closest && e.target.closest("[data-gram]");
+  if(gram){ grammarTopic(gram.dataset.gram); return; }
+  if(e.target.closest && e.target.closest("[data-gram-menu]")){ grammarMenu(); return; }
   const goBtn = e.target.closest && e.target.closest("[data-go]");
   if(goBtn){ lookup(goBtn.dataset.go); return; }
   const aiBtn = e.target.closest && e.target.closest("[data-ai]");
@@ -921,6 +1134,7 @@ $("#trans").onclick=()=>$("#transfile").click();
 $("#transfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) startShot(f,"translate"); };
 $("#shot-cancel").onclick=closeShot;
 $("#shot-go").onclick=confirmShot;
+$("#grammar-btn").onclick=grammarMenu;
 
 /* ── 연결 상태 ── */
 function connState(){
