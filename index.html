@@ -363,7 +363,7 @@
 </div>
 
 <nav class="index" id="index" aria-label="자모 색인"></nav>
-<div class="ver" id="ver">v2</div>
+<div class="ver" id="ver">v3</div>
 
 <div class="shot" id="shot" hidden>
   <div class="shot-stage">
@@ -678,17 +678,13 @@ function downscale(file, maxEdge){
   });
 }
 
-/* 사진 → 서버(비전) → 사전 결과. runAI와 같은 후처리(강세 교정·저장)를 거친다. */
-async function runPhoto(file){
-  if(!navigator.onLine){
-    out.innerHTML='<div class="msg">사진 검색은 인터넷 연결이 필요합니다.</div>'; return;
-  }
+/* 잘린(또는 전체) 사진 → 서버(비전 OCR) → 사전 결과. 강세 교정·저장 후처리. */
+async function lookupPhoto(dataUrl){
   goEl.disabled=true; goEl.textContent="…"; qEl.value="";
-  out.innerHTML='<div class="msg">사진에서 낱말을 읽는 중…</div>';
+  out.innerHTML='<div class="msg">사진에서 낱말을 읽는 중…</div>'; window.scrollTo({top:0});
   const t0 = performance.now();
   const stressReady = loadStressTable();
   try{
-    const dataUrl = await downscale(file);
     const m = dataUrl.match(/^data:(.*?);base64,(.*)$/);
     if(!m) throw new Error("이미지 변환 실패");
     const r = await fetch("./api/ocr",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -711,28 +707,34 @@ async function runPhoto(file){
     render(obj, term, false, obj.found!==false, meta);
   }catch(err){
     console.error(err);
-    out.innerHTML='<div class="msg">사진에서 낱말을 읽지 못했습니다. 글자가 크고 선명하게 다시 찍어 보세요.'
+    out.innerHTML='<div class="msg">사진에서 낱말을 읽지 못했습니다. 글자·사물이 크고 선명하게 나오도록 다시 시도해 보세요.'
       +'<div style="font-size:12.5px;margin-top:6px;color:#8F8570">'+esc(err.message||err)+'</div></div>';
   }finally{
-    goEl.disabled=false; goEl.textContent="찾기"; $("#camfile").value="";
+    goEl.disabled=false; goEl.textContent="찾기";
   }
 }
 
-/* ── 사진 구간 번역: 사진을 띄우고 사각형으로 구간 지정 → 잘라 번역 ── */
+/* ── 사진 선택 화면: 사진을 띄우고 사각형으로 구간 지정(안 그리면 전체) ──
+   mode "word" = 낱말·사물 찾기(OCR),  mode "translate" = 구간 번역 */
 const shotEl=$("#shot"), shotFrame=$("#shot-frame"), shotImgEl=$("#shot-img"), shotSel=$("#shot-sel");
-let selStart=null, selRect=null;
+let selStart=null, selRect=null, shotMode="word", shotFullUrl="";
 
-async function pickForShot(file){
-  if(!navigator.onLine){ out.innerHTML='<div class="msg">구간 번역은 인터넷 연결이 필요합니다.</div>'; return; }
-  try{ openShot(await downscale(file, 1600)); }
+async function startShot(file, mode){
+  if(!navigator.onLine){ out.innerHTML='<div class="msg">사진 검색은 인터넷 연결이 필요합니다.</div>'; return; }
+  try{ openShot(await downscale(file, 1600), mode); }
   catch(_){ out.innerHTML='<div class="msg">사진을 열지 못했습니다.</div>'; }
 }
-function openShot(dataUrl){
+function openShot(dataUrl, mode){
+  shotMode = mode || "word"; shotFullUrl = dataUrl;
   shotImgEl.src=dataUrl; shotSel.hidden=true; selStart=null; selRect=null;
-  $("#shot-go").disabled=true; $("#shot-hint").textContent="번역할 구간을 사각형으로 그어 주세요";
+  const isT = shotMode==="translate";
+  $("#shot-go").textContent = isT ? "번역" : "찾기";
+  $("#shot-go").disabled = false;          // 선택 없이 전체로도 진행 가능
+  $("#shot-hint").textContent = isT ? "번역할 구간을 사각형으로 (전체는 그냥 번역)"
+                                    : "찾을 낱말·사물을 사각형으로 (전체는 그냥 찾기)";
   shotEl.hidden=false;
 }
-function closeShot(){ shotEl.hidden=true; shotImgEl.src=""; $("#transfile").value=""; }
+function closeShot(){ shotEl.hidden=true; shotImgEl.src=""; $("#camfile").value=""; $("#transfile").value=""; }
 function frameXY(ev){
   const r=shotFrame.getBoundingClientRect();
   return { x:Math.min(Math.max(ev.clientX-r.left,0), r.width),
@@ -742,7 +744,6 @@ function drawSel(x,y,w,h){ shotSel.style.left=x+"px"; shotSel.style.top=y+"px"; 
 shotFrame.addEventListener("pointerdown", ev=>{
   ev.preventDefault(); shotFrame.setPointerCapture(ev.pointerId);
   selStart=frameXY(ev); shotSel.hidden=false; drawSel(selStart.x,selStart.y,0,0);
-  $("#shot-go").disabled=true;
 });
 shotFrame.addEventListener("pointermove", ev=>{
   if(!selStart) return; ev.preventDefault(); const p=frameXY(ev);
@@ -752,12 +753,13 @@ shotFrame.addEventListener("pointerup", ev=>{
   if(!selStart) return; const p=frameXY(ev);
   const x=Math.min(selStart.x,p.x), y=Math.min(selStart.y,p.y), w=Math.abs(p.x-selStart.x), h=Math.abs(p.y-selStart.y);
   selStart=null;
-  if(w>16 && h>12){ selRect={x,y,w,h}; $("#shot-go").disabled=false; }
-  else { shotSel.hidden=true; selRect=null; $("#shot-go").disabled=true; }
+  if(w>16 && h>12){ selRect={x,y,w,h}; }   // 유효한 사각형만 구간으로
+  else { shotSel.hidden=true; selRect=null; }
 });
 
-async function runTranslate(){
-  if(!selRect) return;
+/* 현재 선택 영역(없으면 전체)을 원본 해상도로 잘라 data URL로 돌려준다 */
+function cropSelection(){
+  if(!selRect) return shotFullUrl;
   const iw=shotImgEl.naturalWidth, ih=shotImgEl.naturalHeight;
   const dw=shotImgEl.clientWidth, dh=shotImgEl.clientHeight;
   const sx=selRect.x*iw/dw, sy=selRect.y*ih/dh, sw=selRect.w*iw/dw, sh=selRect.h*ih/dh;
@@ -765,15 +767,24 @@ async function runTranslate(){
   const cw=Math.max(1,Math.round(sw*scale)), ch=Math.max(1,Math.round(sh*scale));
   const c=document.createElement("canvas"); c.width=cw; c.height=ch;
   c.getContext("2d").drawImage(shotImgEl, sx,sy,sw,sh, 0,0,cw,ch);
-  const cropUrl=c.toDataURL("image/jpeg",0.85);
-  const b64=cropUrl.split(",")[1];
+  return c.toDataURL("image/jpeg",0.85);
+}
+function confirmShot(){
+  const url = cropSelection();   // 선택 화면이 닫히기 전에 잘라 둔다
+  const mode = shotMode;
   closeShot();
+  if(mode==="translate") lookupTranslate(url);
+  else lookupPhoto(url);
+}
+
+async function lookupTranslate(dataUrl){
   goEl.disabled=true; goEl.textContent="…";
   out.innerHTML='<div class="msg">구간을 번역하는 중…</div>'; window.scrollTo({top:0});
   const t0=performance.now(); const stressReady=loadStressTable();
   try{
+    const m=dataUrl.match(/^data:(.*?);base64,(.*)$/); if(!m) throw new Error("이미지 변환 실패");
     const r=await fetch("./api/translate",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ media:"image/jpeg", image:b64 })});
+      body:JSON.stringify({ media:m[1], image:m[2] })});
     const data=await r.json();
     if(!data || !data.content) throw new Error((data&&data.error&&(data.error.message||data.error))||"응답이 없습니다");
     let raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
@@ -781,7 +792,7 @@ async function runTranslate(){
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
     const obj=JSON.parse(raw.slice(s, e+1));
     await stressReady;
-    renderTranslation(obj, { clientMs:Math.round(performance.now()-t0), serverMs:data.ms, img:cropUrl });
+    renderTranslation(obj, { clientMs:Math.round(performance.now()-t0), serverMs:data.ms, img:dataUrl });
   }catch(err){
     console.error(err);
     out.innerHTML='<div class="msg">구간을 번역하지 못했습니다. 글자가 크고 선명하게 나오도록 다시 시도해 보세요.'
@@ -905,11 +916,11 @@ document.addEventListener("keydown",e=>{
 goEl.onclick=()=>lookup(qEl.value);
 qEl.addEventListener("keydown",e=>{if(e.key==="Enter")lookup(qEl.value);});
 $("#cam").onclick=()=>$("#camfile").click();
-$("#camfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) runPhoto(f); };
+$("#camfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) startShot(f,"word"); };
 $("#trans").onclick=()=>$("#transfile").click();
-$("#transfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) pickForShot(f); };
+$("#transfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) startShot(f,"translate"); };
 $("#shot-cancel").onclick=closeShot;
-$("#shot-go").onclick=runTranslate;
+$("#shot-go").onclick=confirmShot;
 
 /* ── 연결 상태 ── */
 function connState(){
