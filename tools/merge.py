@@ -46,7 +46,7 @@ for w, k in ko.items():
     out[w] = {
         "found": True,
         "headword": w,
-        "stressed": fix_stress(o.get("s", w)),
+        "stressed": k.get("stressed") or fix_stress(o.get("s", w)),
         "pron": k.get("pron",""),
         "pos": o.get("pos",""),
         "pos_ko": o.get("pos_ko",""),
