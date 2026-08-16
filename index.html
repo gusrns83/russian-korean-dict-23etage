@@ -300,6 +300,11 @@
   }
   .g-menu button:hover,.g-menu button:focus{color:var(--red);outline:none;}
   .g-menu .g-sub{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:2px;font-family:"PT Sans Narrow",sans-serif;}
+  .g-cat{font-family:"PT Sans Narrow",sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--gilt);margin:16px 0 2px;}
+  .g-cat:first-of-type{margin-top:6px;}
+  .g-hint{font-family:"PT Sans Narrow",sans-serif;font-size:12px;color:var(--ink-soft);
+    margin-top:18px;padding-top:10px;border-top:1px solid var(--rule);}
   .g-back{border:0;background:transparent;color:var(--red);cursor:pointer;
     font-family:"PT Sans Narrow",sans-serif;font-size:14px;letter-spacing:.04em;padding:0 0 8px;}
   .grammar h2{font-family:"Nanum Myeongjo",serif;font-size:21px;color:var(--red);margin:4px 0 10px;letter-spacing:.03em;}
@@ -400,7 +405,7 @@
 </div>
 
 <nav class="index" id="index" aria-label="자모 색인"></nav>
-<div class="ver" id="ver">v4</div>
+<div class="ver" id="ver">v5</div>
 
 <div class="shot" id="shot" hidden>
   <div class="shot-stage">
@@ -1075,17 +1080,105 @@ const GRAMMAR = {
    <tr><td class="g-ru">вы-</td><td>나옴</td><td class="g-ru">вы́йти (나가다)</td></tr>
    <tr><td class="g-ru">по-</td><td>출발</td><td class="g-ru">пойти́ (가기 시작하다)</td></tr>
   </table></div>
+ `},
+
+ alphabet: { menu:"알파벳·발음", sub:"키릴 문자 33개와 소리", html:`
+  <h2>알파벳 (Алфави́т)</h2>
+  <p>러시아어는 키릴 문자 33자를 쓴다. 강세 있는 모음은 또렷이, 강세 없는 <span class="g-ru">о</span>는 [아], <span class="g-ru">е</span>는 [이]에 가깝게 약해진다.</p>
+  <div class="g-table-wrap"><table>
+   <tr><th>글자</th><th>소리</th><th>글자</th><th>소리</th></tr>
+   <tr><td class="g-ru">А а</td><td>아</td><td class="g-ru">Р р</td><td>르(혀 굴림)</td></tr>
+   <tr><td class="g-ru">Б б</td><td>브</td><td class="g-ru">С с</td><td>스</td></tr>
+   <tr><td class="g-ru">В в</td><td>브 (v)</td><td class="g-ru">Т т</td><td>뜨</td></tr>
+   <tr><td class="g-ru">Г г</td><td>그</td><td class="g-ru">У у</td><td>우</td></tr>
+   <tr><td class="g-ru">Д д</td><td>드</td><td class="g-ru">Ф ф</td><td>프 (f)</td></tr>
+   <tr><td class="g-ru">Е е</td><td>예</td><td class="g-ru">Х х</td><td>흐 (ㅎ)</td></tr>
+   <tr><td class="g-ru">Ё ё</td><td>요</td><td class="g-ru">Ц ц</td><td>쯔</td></tr>
+   <tr><td class="g-ru">Ж ж</td><td>즈 (zh)</td><td class="g-ru">Ч ч</td><td>치</td></tr>
+   <tr><td class="g-ru">З з</td><td>즈 (z)</td><td class="g-ru">Ш ш</td><td>슈 (sh)</td></tr>
+   <tr><td class="g-ru">И и</td><td>이</td><td class="g-ru">Щ щ</td><td>시 (부드러운 sh)</td></tr>
+   <tr><td class="g-ru">Й й</td><td>이(짧게)</td><td class="g-ru">Ъ ъ</td><td>경음부호(소리 없음)</td></tr>
+   <tr><td class="g-ru">К к</td><td>크</td><td class="g-ru">Ы ы</td><td>으</td></tr>
+   <tr><td class="g-ru">Л л</td><td>ㄹ</td><td class="g-ru">Ь ь</td><td>연음부호(소리 없음)</td></tr>
+   <tr><td class="g-ru">М м</td><td>므</td><td class="g-ru">Э э</td><td>에</td></tr>
+   <tr><td class="g-ru">Н н</td><td>느</td><td class="g-ru">Ю ю</td><td>유</td></tr>
+   <tr><td class="g-ru">О о</td><td>오</td><td class="g-ru">Я я</td><td>야</td></tr>
+   <tr><td class="g-ru">П п</td><td>쁘</td><td></td><td></td></tr>
+  </table></div>
+  <p class="tip">Ъ(경음)·Ь(연음)은 소리가 없고 앞뒤 발음을 조절한다.</p>
+ `},
+
+ pronoun: { menu:"인칭대명사", sub:"나·너·그… 격변화", html:`
+  <h2>인칭대명사 (Ли́чные местоиме́ния)</h2>
+  <div class="g-table-wrap"><table>
+   <tr><th>격</th><th>나</th><th>너</th><th>그</th><th>그녀</th><th>우리</th><th>너희</th><th>그들</th></tr>
+   <tr><td>주격</td><td class="g-ru">я</td><td class="g-ru">ты</td><td class="g-ru">он</td><td class="g-ru">она́</td><td class="g-ru">мы</td><td class="g-ru">вы</td><td class="g-ru">они́</td></tr>
+   <tr><td>생격</td><td class="g-ru">меня́</td><td class="g-ru">тебя́</td><td class="g-ru">его́</td><td class="g-ru">её</td><td class="g-ru">нас</td><td class="g-ru">вас</td><td class="g-ru">их</td></tr>
+   <tr><td>여격</td><td class="g-ru">мне</td><td class="g-ru">тебе́</td><td class="g-ru">ему́</td><td class="g-ru">ей</td><td class="g-ru">нам</td><td class="g-ru">вам</td><td class="g-ru">им</td></tr>
+   <tr><td>대격</td><td class="g-ru">меня́</td><td class="g-ru">тебя́</td><td class="g-ru">его́</td><td class="g-ru">её</td><td class="g-ru">нас</td><td class="g-ru">вас</td><td class="g-ru">их</td></tr>
+   <tr><td>조격</td><td class="g-ru">мной</td><td class="g-ru">тобо́й</td><td class="g-ru">им</td><td class="g-ru">ей</td><td class="g-ru">на́ми</td><td class="g-ru">ва́ми</td><td class="g-ru">и́ми</td></tr>
+   <tr><td>전치격</td><td class="g-ru">мне</td><td class="g-ru">тебе́</td><td class="g-ru">нём</td><td class="g-ru">ней</td><td class="g-ru">нас</td><td class="g-ru">вас</td><td class="g-ru">них</td></tr>
+  </table></div>
+  <p class="tip">* 전치사 뒤에서 3인칭은 н-이 붙는다: <span class="g-ru">у него́</span>, <span class="g-ru">с ней</span>, <span class="g-ru">о них</span>.</p>
+ `},
+
+ numeral: { menu:"숫자 (기수·서수)", sub:"1~100과 순서", html:`
+  <h2>숫자 (Чи́сла)</h2>
+  <h3>기수 1~10</h3>
+  <div class="g-table-wrap"><table>
+   <tr><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr>
+   <tr><td class="g-ru">оди́н</td><td class="g-ru">два</td><td class="g-ru">три</td><td class="g-ru">четы́ре</td><td class="g-ru">пять</td><td class="g-ru">шесть</td><td class="g-ru">семь</td><td class="g-ru">во́семь</td><td class="g-ru">де́вять</td><td class="g-ru">де́сять</td></tr>
+  </table></div>
+  <h3>11~20 · 십단위</h3>
+  <p class="g-ru">11 оди́ннадцать · 12 двена́дцать · 13 трина́дцать · 14 четы́рнадцать · 15 пятна́дцать · 16 шестна́дцать · 17 семна́дцать · 18 восемна́дцать · 19 девятна́дцать · 20 два́дцать</p>
+  <p class="g-ru">30 три́дцать · 40 со́рок · 50 пятьдеся́т · 60 шестьдеся́т · 70 се́мьдесят · 80 во́семьдесят · 90 девяно́сто · 100 сто</p>
+  <h3>서수 (몇 번째)</h3>
+  <p class="g-ru">1 пе́рвый · 2 второ́й · 3 тре́тий · 4 четвёртый · 5 пя́тый · 6 шесто́й · 7 седьмо́й · 8 восьмо́й · 9 девя́тый · 10 деся́тый</p>
+  <p class="tip">* 명사 형태는 숫자에 따라 달라진다(1 / 2·3·4 / 5+) — '단수·복수 변화' 참고.</p>
+ `},
+
+ time: { menu:"시간·요일·달", sub:"요일·달 이름과 시간 말하기", html:`
+  <h2>요일 (Дни неде́ли)</h2>
+  <p class="g-ru">понеде́льник(월) · вто́рник(화) · среда́(수) · четве́рг(목) · пя́тница(금) · суббо́та(토) · воскресе́нье(일)</p>
+  <p class="tip">"~요일에"는 <span class="g-ru">в + 대격</span>: <span class="g-ru">в понеде́льник</span>(월요일에), <span class="g-ru">в сре́ду</span>(수요일에).</p>
+  <h2>달 (Ме́сяцы)</h2>
+  <p class="g-ru">янва́рь · февра́ль · март · апре́ль · май · ию́нь · ию́ль · а́вгуст · сентя́брь · октя́брь · ноя́брь · дека́брь</p>
+  <p class="tip">"~월에"는 <span class="g-ru">в + 전치격</span>: <span class="g-ru">в январе́</span>(1월에), <span class="g-ru">в ма́е</span>(5월에).</p>
+  <h2>시간 (Вре́мя)</h2>
+  <p>몇 시예요? — <span class="g-ru">Ско́лько вре́мени?</span> / <span class="g-ru">Кото́рый час?</span></p>
+  <p class="g-ru">1시 час · 2~4시 два часа́ · 5시 이상 пять часо́в</p>
+ `},
+
+ question: { menu:"의문사·긍정/부정", sub:"누가·무엇·어디·왜 …", html:`
+  <h2>의문사 (Вопроси́тельные слова́)</h2>
+  <div class="g-table-wrap"><table>
+   <tr><th>러시아어</th><th>뜻</th><th>러시아어</th><th>뜻</th></tr>
+   <tr><td class="g-ru">кто</td><td>누가</td><td class="g-ru">когда́</td><td>언제</td></tr>
+   <tr><td class="g-ru">что</td><td>무엇</td><td class="g-ru">почему́</td><td>왜</td></tr>
+   <tr><td class="g-ru">где</td><td>어디에</td><td class="g-ru">заче́м</td><td>무엇 때문에</td></tr>
+   <tr><td class="g-ru">куда́</td><td>어디로</td><td class="g-ru">как</td><td>어떻게</td></tr>
+   <tr><td class="g-ru">отку́да</td><td>어디서</td><td class="g-ru">како́й</td><td>어떤</td></tr>
+   <tr><td class="g-ru">чей</td><td>누구의</td><td class="g-ru">ско́лько</td><td>얼마나</td></tr>
+  </table></div>
+  <h3>긍정·부정</h3>
+  <p><span class="g-ru">да</span>(네) · <span class="g-ru">нет</span>(아니오) · <span class="g-ru">не</span>(~아니다, 낱말 앞) · <span class="g-ru">ни</span>(~조차)</p>
+  <p class="tip">러시아어는 이중부정을 쓴다: <span class="g-ru">Я ничего́ не зна́ю.</span> (나는 아무것도 모른다)</p>
  `}
 };
 
+const G_ORDER = ["alphabet","pronoun","numeral","time","question","verb","case","number","prep","motion"];
+const G_CAT = { alphabet:"기초", pronoun:"기초", numeral:"기초", time:"기초", question:"기초",
+                verb:"문법", case:"문법", number:"문법", prep:"문법", motion:"문법" };
+
 function grammarMenu(){
   setHead("");
-  out.innerHTML = `<div class="grammar">
-    <div class="g-title">📖 러시아어 문법</div>
-    <ul class="g-menu">
-      ${Object.keys(GRAMMAR).map(id=>`<li><button type="button" data-gram="${id}">${GRAMMAR[id].menu}<span class="g-sub">${GRAMMAR[id].sub}</span></button></li>`).join("")}
-    </ul>
-  </div>`;
+  const body = ["기초","문법"].map(cat=>{
+    const ids = G_ORDER.filter(id=>G_CAT[id]===cat);
+    return `<div class="g-cat">${cat}</div><ul class="g-menu">`
+      + ids.map(id=>`<li><button type="button" data-gram="${id}">${GRAMMAR[id].menu}<span class="g-sub">${GRAMMAR[id].sub}</span></button></li>`).join("")
+      + `</ul>`;
+  }).join("");
+  out.innerHTML = `<div class="grammar"><div class="g-title">📖 러시아어 문법</div>${body}</div>`;
   $("#pageno").textContent = "— 문법 —";
   window.scrollTo({top:0});
 }
@@ -1095,7 +1188,10 @@ function grammarTopic(id){
   out.innerHTML = `<div class="grammar">
     <button class="g-back" type="button" data-gram-menu="1">‹ 문법 메뉴</button>
     ${g.html}
+    <div class="g-hint">러시아어 낱말을 누르면 사전에서 찾아볼 수 있어요.</div>
   </div>`;
+  // 문법 속 러시아어 낱말을 클릭하면 사전으로 이어지게 한다
+  out.querySelectorAll(".g-ru").forEach(el=>{ el.innerHTML = linkify(el.textContent); });
   $("#pageno").textContent = "— 문법 —";
   window.scrollTo({top:0,behavior:"smooth"});
 }
