@@ -427,22 +427,21 @@ function reverseSearch(q){
   const ents=BOOK.entries, seen=new Set(), scored=[];
   for(const key in ents){
     const e=ents[key], senses=e.senses||[];
-    let score=0;
+    let hit=false;
     for(const s of senses){
       if(!s.gloss) continue;
+      // 뜻을 쉼표·가운뎃점 등으로 나눈 낱말과 '정확히' 같을 때만 (부분 포함은 제외)
       const toks=s.gloss.split(/[\s,·;()／/]+/).filter(Boolean);
-      const sc = toks.includes(q) ? 2 : (s.gloss.indexOf(q)>=0 ? 1 : 0);
-      if(sc>score) score=sc;
+      if(toks.includes(q)){ hit=true; break; }
     }
-    if(score>0){
+    if(hit){
       const hw=e.headword||key;
       if(seen.has(hw)) continue; seen.add(hw);
       scored.push({headword:hw, stressed:e.stressed||hw,
-        gloss:senses.map(s=>s.gloss).filter(Boolean).join("; "), score});
+        gloss:senses.map(s=>s.gloss).filter(Boolean).join("; ")});
     }
   }
-  scored.sort((a,b)=>b.score-a.score);   // 정확 일치 우선, 나머지는 빈도 순 유지
-  return scored.slice(0,50);
+  return scored.slice(0,50);   // 이미 빈도 순
 }
 
 function renderReverse(q, results){
