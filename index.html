@@ -281,9 +281,11 @@
 
   /* 앱 버전 (왼쪽 아래 구석에 작게) */
   .ver{
-    position:fixed;left:7px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:6;
-    font-family:"PT Sans Narrow",sans-serif;font-size:10px;letter-spacing:.08em;
-    color:var(--ink-soft);opacity:.5;pointer-events:none;
+    position:fixed;left:6px;bottom:calc(6px + env(safe-area-inset-bottom));z-index:6;
+    font-family:"PT Sans Narrow",sans-serif;font-size:11px;letter-spacing:.06em;
+    color:var(--ink-soft);background:rgba(237,232,218,.85);
+    border:1px solid var(--rule);border-radius:10px;padding:1px 7px;
+    pointer-events:none;
   }
   .timing{
     font-family:"PT Sans Narrow",sans-serif;font-size:11.5px;letter-spacing:.04em;
