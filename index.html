@@ -335,7 +335,50 @@ function fromBook(term){
 }
 function markReady(){
   const n = Object.keys(BOOK.entries).length;
-  if(n){ $("#rh-r").dataset.n = n; connState(); }
+  if(n){ $("#rh-r").dataset.n = n; connState(); buildStress(); }
+}
+
+/* 검증된 강세표: 수록 데이터(표제어·변화형)를 정규형→강세형으로 모은다.
+   한 정규형에 강세가 여러 갈래면(동음이의) 교체하지 않는다. */
+let STRESS = null;
+function buildStress(){
+  const m = new Map();
+  const add = v=>{
+    if(typeof v!=="string") return;
+    if((v.match(/́/g)||[]).length!==1) return;         // 강세가 정확히 하나인 낱말만
+    if(!/^[А-Яа-яЁё́]+$/.test(v)) return;
+    const key=v.replace(/́/g,"").toLowerCase();
+    if(!key) return;
+    if(!m.has(key)) m.set(key,new Set());
+    m.get(key).add(v.toLowerCase());
+  };
+  for(const k in BOOK.entries){
+    const e=BOOK.entries[k];
+    add(e.stressed);
+    (e.forms||[]).forEach(f=>String(f.value||"").split(/[\/\s]+/).forEach(add));
+  }
+  STRESS=m;
+}
+function authStress(word){        // 정규형의 '유일한' 강세형(없거나 여러 갈래면 null)
+  if(!STRESS) return null;
+  const s=STRESS.get(String(word||"").replace(/́/g,"").toLowerCase());
+  return (s && s.size===1) ? [...s][0] : null;
+}
+function restress(text){          // 문장 속 낱말을 데이터 강세로 교체(첫 글자 대문자 유지)
+  return String(text||"").replace(/[А-Яа-яЁё́]+/g, w=>{
+    const a=authStress(w); if(!a) return w;
+    return (w[0] && w[0]!==w[0].toLowerCase()) ? a.charAt(0).toUpperCase()+a.slice(1) : a;
+  });
+}
+function correctStress(obj){      // AI 결과의 강세를 데이터와 대조해 바로잡는다
+  if(!obj || obj.found===false || !STRESS) return obj;
+  const hw=authStress(obj.headword||"");
+  if(hw) obj.stressed=hw;
+  if(obj.gram) obj.gram=restress(obj.gram);
+  (obj.senses||[]).forEach(s=>(s.examples||[]).forEach(x=>{ if(x.ru) x.ru=restress(x.ru); }));
+  (obj.idioms||[]).forEach(x=>{ if(x.ru) x.ru=restress(x.ru); });
+  (obj.forms||[]).forEach(f=>{ if(f.value) f.value=restress(f.value); });
+  return obj;
 }
 
 /* 찾아본 낱말을 이 기기에 남겨 둔다 (인터넷 없이 다시 열기 위해) */
@@ -501,8 +544,9 @@ async function runAI(term, waitMsg){
     raw = raw.replace(/```json|```/g,"").trim();
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
     const obj = JSON.parse(raw.slice(s, e+1));
+    correctStress(obj);                       // 데이터에 있는 낱말은 검증된 강세로 교체
     if(obj.found!==false){
-      shelf.put(term, obj);                 // 이 기기에도 남겨 둔다
+      shelf.put(term, obj);                 // 이 기기에도 남겨 둔다(이미 교정된 상태)
       if(obj.headword && obj.headword!==term) shelf.put(obj.headword, obj);
     }
     render(obj, term, false, obj.found!==false, meta);
