@@ -361,7 +361,7 @@
 </div>
 
 <nav class="index" id="index" aria-label="자모 색인"></nav>
-<div class="ver" id="ver">v1</div>
+<div class="ver" id="ver">v2</div>
 
 <div class="shot" id="shot" hidden>
   <div class="shot-stage">
@@ -700,6 +700,8 @@ async function runPhoto(file){
     const obj = JSON.parse(raw.slice(s, e+1));
     await stressReady; correctStress(obj);
     const term = obj.headword || "";
+    // '사진 속 사물' 안내는 이번 사진 검색에서만 보이도록 meta에만 싣는다(저장 데이터엔 안 남김)
+    meta.objSeen = (obj.found!==false && obj.kind==="object") ? (obj.seen||"") : null;
     if(obj.found!==false && term){
       qEl.value = term;
       shelf.put(term, obj);
@@ -847,7 +849,7 @@ function render(d, term, built, ai, meta){
         ${ai?`<span class="ai-badge" title="AI가 풀어 쓴 상세 뜻풀이입니다">AI 상세</span>`:""}
         ${unv?`<span class="unv-badge" title="검증 데이터에 없어 AI가 추정한 강세입니다">강세 미검증</span>`:""}
       </div>
-      ${d.kind==="object"&&d.seen?`<div class="obj-note">📷 사진 속 사물: ${esc(d.seen)}</div>`:""}
+      ${meta&&meta.objSeen?`<div class="obj-note">📷 사진 속 사물: ${esc(meta.objSeen)}</div>`:""}
       ${d.gram?`<div class="gram">${esc(d.gram)}${d.pos_ko?` · ${esc(d.pos_ko)}`:""}</div>`:""}
       ${timingLine(meta)}
       ${unv?`<div class="verify">이 낱말은 검증 데이터에 없어 강세가 정확하지 않을 수 있어요.
