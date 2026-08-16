@@ -272,6 +272,11 @@
     font-family:"PT Sans Narrow",sans-serif;font-size:12.5px;letter-spacing:.02em;
     color:var(--ink-soft);margin:2px 0 6px;
   }
+  .shot-thumb{
+    display:block;max-width:100%;max-height:150px;width:auto;
+    border:1px solid var(--rule);border-radius:3px;margin:0 0 12px;
+    background:var(--paper-deep);
+  }
   .timing{
     font-family:"PT Sans Narrow",sans-serif;font-size:11.5px;letter-spacing:.04em;
     color:var(--ink-soft);margin:2px 0 8px;
@@ -679,7 +684,7 @@ async function runPhoto(file){
       body:JSON.stringify({ media:m[1], image:m[2] })});
     const data = await r.json();
     if(!data || !data.content) throw new Error((data&&data.error&&(data.error.message||data.error))||"응답이 없습니다");
-    const meta = { clientMs: Math.round(performance.now()-t0), serverMs: data.ms };
+    const meta = { clientMs: Math.round(performance.now()-t0), serverMs: data.ms, img: dataUrl };
     let raw = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
     raw = raw.replace(/```json|```/g,"").trim();
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
@@ -747,7 +752,8 @@ async function runTranslate(){
   const cw=Math.max(1,Math.round(sw*scale)), ch=Math.max(1,Math.round(sh*scale));
   const c=document.createElement("canvas"); c.width=cw; c.height=ch;
   c.getContext("2d").drawImage(shotImgEl, sx,sy,sw,sh, 0,0,cw,ch);
-  const b64=c.toDataURL("image/jpeg",0.85).split(",")[1];
+  const cropUrl=c.toDataURL("image/jpeg",0.85);
+  const b64=cropUrl.split(",")[1];
   closeShot();
   goEl.disabled=true; goEl.textContent="…";
   out.innerHTML='<div class="msg">구간을 번역하는 중…</div>'; window.scrollTo({top:0});
@@ -762,7 +768,7 @@ async function runTranslate(){
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
     const obj=JSON.parse(raw.slice(s, e+1));
     await stressReady;
-    renderTranslation(obj, { clientMs:Math.round(performance.now()-t0), serverMs:data.ms });
+    renderTranslation(obj, { clientMs:Math.round(performance.now()-t0), serverMs:data.ms, img:cropUrl });
   }catch(err){
     console.error(err);
     out.innerHTML='<div class="msg">구간을 번역하지 못했습니다. 글자가 크고 선명하게 나오도록 다시 시도해 보세요.'
@@ -777,6 +783,7 @@ function renderTranslation(d, meta){
   }
   const ru=restress(d.ru||"");
   out.innerHTML=`<article class="entry">
+    ${shotThumb(meta)}
     <div class="head"><span class="word">구간 번역</span><span class="ai-badge" title="AI 번역">AI 번역</span></div>
     ${timingLine(meta)}
     <div class="ex" style="margin-top:6px">
@@ -790,6 +797,9 @@ function renderTranslation(d, meta){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
+function shotThumb(meta){
+  return (meta && meta.img) ? `<img class="shot-thumb" src="${meta.img}" alt="찍은 사진">` : "";
+}
 function timingLine(meta){
   if(!meta) return "";
   const sec = m => (Math.max(0,m)/1000).toFixed(1)+"초";
@@ -820,6 +830,7 @@ function render(d, term, built, ai, meta){
 
   out.innerHTML=`
     <article class="entry">
+      ${shotThumb(meta)}
       <div class="head">
         <span class="word">${esc(d.stressed||d.headword)}</span>
         ${d.pron?`<span class="pron">[${esc(d.pron)}]</span>`:""}
