@@ -80,6 +80,7 @@
     color:var(--red);padding:0 4px;
   }
   .search button:disabled{color:#B0A691;cursor:default;}
+  .search .cam{font-size:17px;padding:0 6px;line-height:1;filter:grayscale(.2);}
 
   /* ── 난외 표제 (running head) ── */
   .runhead{
@@ -278,8 +279,10 @@
     <div class="sub">Русско-корейский учебный словарь</div>
     <div class="search">
       <input id="q" type="text" placeholder="слово / 낱말" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+      <button id="cam" class="cam" type="button" title="사진으로 찾기" aria-label="사진으로 찾기">📷</button>
       <button id="go">찾기</button>
     </div>
+    <input id="camfile" type="file" accept="image/*" capture="environment" hidden>
   </header>
 
   <div class="runhead"><span id="rh-l">—</span><span id="rh-r">учебный словарь</span></div>
@@ -293,6 +296,7 @@
     <div class="msg">
       러시아어 낱말을 넣으면 <b>강세·품사·여러 갈래의 뜻·예문</b>을 종이 사전처럼 펼쳐 보여줍니다.
       한국어로 찾으면 뜻이 맞는 러시아어 낱말들을 모아 보여 줍니다(한러). 예문 속 낱말을 누르면 그 낱말로 이어서 찾아갑니다.
+      책·간판 속 러시아어는 <b>📷 버튼</b>으로 찍어서 찾을 수 있습니다.
       자주 쓰는 낱말은 이 책 안에 이미 실려 있어, 인터넷 없이도 곧바로 열립니다.
       <div style="margin-top:10px">
         <button class="seed">книга</button><button class="seed">идти</button>
@@ -592,6 +596,62 @@ async function runAI(term, waitMsg){
   }
 }
 
+/* 사진을 캔버스로 줄여 용량·토큰을 아낀다 → data:image/jpeg;base64,... */
+function downscale(file, maxEdge){
+  maxEdge = maxEdge || 1400;
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const scale = Math.min(1, maxEdge/Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width*scale)), h = Math.max(1, Math.round(img.height*scale));
+      const c = document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(img.src);
+      try{ res(c.toDataURL("image/jpeg", 0.82)); }catch(e){ rej(e); }
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(img.src); rej(new Error("이미지를 열 수 없습니다")); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/* 사진 → 서버(비전) → 사전 결과. runAI와 같은 후처리(강세 교정·저장)를 거친다. */
+async function runPhoto(file){
+  if(!navigator.onLine){
+    out.innerHTML='<div class="msg">사진 검색은 인터넷 연결이 필요합니다.</div>'; return;
+  }
+  goEl.disabled=true; goEl.textContent="…"; qEl.value="";
+  out.innerHTML='<div class="msg">사진에서 낱말을 읽는 중…</div>';
+  const t0 = performance.now();
+  const stressReady = loadStressTable();
+  try{
+    const dataUrl = await downscale(file);
+    const m = dataUrl.match(/^data:(.*?);base64,(.*)$/);
+    if(!m) throw new Error("이미지 변환 실패");
+    const r = await fetch("./api/ocr",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ media:m[1], image:m[2] })});
+    const data = await r.json();
+    if(!data || !data.content) throw new Error((data&&data.error&&(data.error.message||data.error))||"응답이 없습니다");
+    const meta = { clientMs: Math.round(performance.now()-t0), serverMs: data.ms };
+    let raw = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    raw = raw.replace(/```json|```/g,"").trim();
+    const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
+    const obj = JSON.parse(raw.slice(s, e+1));
+    await stressReady; correctStress(obj);
+    const term = obj.headword || "";
+    if(obj.found!==false && term){
+      qEl.value = term;
+      shelf.put(term, obj);
+    }
+    render(obj, term, false, obj.found!==false, meta);
+  }catch(err){
+    console.error(err);
+    out.innerHTML='<div class="msg">사진에서 낱말을 읽지 못했습니다. 글자가 크고 선명하게 다시 찍어 보세요.'
+      +'<div style="font-size:12.5px;margin-top:6px;color:#8F8570">'+esc(err.message||err)+'</div></div>';
+  }finally{
+    goEl.disabled=false; goEl.textContent="찾기"; $("#camfile").value="";
+  }
+}
+
 function timingLine(meta){
   if(!meta) return "";
   const sec = m => (Math.max(0,m)/1000).toFixed(1)+"초";
@@ -680,6 +740,8 @@ document.addEventListener("keydown",e=>{
 });
 goEl.onclick=()=>lookup(qEl.value);
 qEl.addEventListener("keydown",e=>{if(e.key==="Enter")lookup(qEl.value);});
+$("#cam").onclick=()=>$("#camfile").click();
+$("#camfile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) runPhoto(f); };
 
 /* ── 연결 상태 ── */
 function connState(){
