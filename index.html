@@ -370,6 +370,21 @@ function restress(text){          // 문장 속 낱말을 데이터 강세로 �
     return (w[0] && w[0]!==w[0].toLowerCase()) ? a.charAt(0).toUpperCase()+a.slice(1) : a;
   });
 }
+/* 더 넓은 강세 대조표(OpenRussian ~4만 낱말)를 처음 AI 검색할 때 한 번만 받아 합친다 */
+let stressLoaded = null;
+function loadStressTable(){
+  if(stressLoaded) return stressLoaded;
+  stressLoaded = fetch("stress.json").then(r=>r.json()).then(tbl=>{
+    if(!STRESS) STRESS = new Map();
+    for(const key in tbl){
+      const v = tbl[key];
+      if(STRESS.has(key)) STRESS.get(key).add(v);
+      else STRESS.set(key, new Set([v]));
+    }
+  }).catch(()=>{});   // 못 받아도 기존(수록어) 대조표로 계속 동작
+  return stressLoaded;
+}
+
 function correctStress(obj){      // AI 결과의 강세를 데이터와 대조해 바로잡는다
   if(!obj || obj.found===false || !STRESS) return obj;
   const hw=authStress(obj.headword||"");
@@ -537,6 +552,7 @@ async function runAI(term, waitMsg){
   goEl.disabled=true; goEl.textContent="…";
   out.innerHTML=`<div class="msg">${esc(waitMsg||"AI가 더 자세히 풀어내는 중…")}</div>`;
   const t0 = performance.now();
+  const stressReady = loadStressTable();      // AI 호출과 나란히 대조표를 받아 둔다
   try{
     const data = await ask(term);
     const meta = { clientMs: Math.round(performance.now()-t0), serverMs: data.ms, cached: data.cached };
@@ -544,6 +560,7 @@ async function runAI(term, waitMsg){
     raw = raw.replace(/```json|```/g,"").trim();
     const s=raw.indexOf("{"), e=raw.lastIndexOf("}");
     const obj = JSON.parse(raw.slice(s, e+1));
+    await stressReady;                        // 대조표 준비를 기다린 뒤
     correctStress(obj);                       // 데이터에 있는 낱말은 검증된 강세로 교체
     if(obj.found!==false){
       shelf.put(term, obj);                 // 이 기기에도 남겨 둔다(이미 교정된 상태)
