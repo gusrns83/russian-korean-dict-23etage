@@ -1,8 +1,25 @@
 # OpenRussian 자료(강세·변화형) + 손으로 쓴 한국어 뜻풀이 → words.json
-import json, glob, os
+import json, glob, os, re
 
 top = {e["w"]: e for e in json.load(open("top5000.json", encoding="utf-8"))}
 GENDER = {"m":"남성","f":"여성","n":"중성"}
+
+# OpenRussian 원본은 한 형태에 강세를 두 곳 찍어 두기도 한다(둘 다 허용).
+# 화면엔 한 낱말에 강세 2개로 잘못 보이므로 "фро́нта / фронта́"처럼 갈라 준다.
+ACC = "́"
+_WORD = re.compile("[А-Яа-яЁё" + ACC + "]+")
+def _split_double(word):
+    idxs = [i for i, ch in enumerate(word) if ch == ACC]
+    if len(idxs) < 2:
+        return word
+    seen, variants = set(), []
+    for keep in idxs:
+        v = "".join(ch for i, ch in enumerate(word) if ch != ACC or i == keep)
+        if v not in seen:
+            seen.add(v); variants.append(v)
+    return " / ".join(variants)
+def fix_stress(s):
+    return _WORD.sub(lambda m: _split_double(m.group(0)), s) if s else s
 
 ko = {}
 for p in sorted(glob.glob("ko/ko*.json")):
@@ -29,7 +46,7 @@ for w, k in ko.items():
     out[w] = {
         "found": True,
         "headword": w,
-        "stressed": o.get("s", w),
+        "stressed": fix_stress(o.get("s", w)),
         "pron": k.get("pron",""),
         "pos": o.get("pos",""),
         "pos_ko": o.get("pos_ko",""),
@@ -38,7 +55,7 @@ for w, k in ko.items():
                     "examples":[{"ru":a,"ko":b} for a,b in s.get("ex",[])]}
                    for s in k["senses"]],
         "idioms": [{"ru":a,"ko":b} for a,b in k.get("idioms",[])],
-        "forms":  [{"label":a,"value":b} for a,b in forms],
+        "forms":  [{"label":a,"value":fix_stress(b)} for a,b in forms],
         "etym":   k.get("etym",""),
     }
 
