@@ -229,6 +229,16 @@
     text-transform:uppercase;color:var(--gilt);border:1px solid var(--gilt);
     border-radius:2px;padding:1px 6px;margin-left:9px;vertical-align:middle;white-space:nowrap;
   }
+  .unv-badge{
+    font-family:"PT Sans Narrow",sans-serif;font-size:10.5px;letter-spacing:.08em;
+    color:var(--red);border:1px solid var(--red);border-radius:2px;
+    padding:1px 6px;margin-left:7px;vertical-align:middle;white-space:nowrap;opacity:.85;
+  }
+  .verify{
+    font-family:"PT Sans Narrow",sans-serif;font-size:12px;letter-spacing:.02em;
+    color:var(--ink-soft);margin:2px 0 10px;line-height:1.5;
+  }
+  .verify a{color:var(--red);text-decoration:underline;text-underline-offset:2px;white-space:nowrap;}
   .timing{
     font-family:"PT Sans Narrow",sans-serif;font-size:11.5px;letter-spacing:.04em;
     color:var(--ink-soft);margin:2px 0 8px;
@@ -393,7 +403,13 @@ function correctStress(obj){      // AI 결과의 강세를 데이터와 대조�
   (obj.senses||[]).forEach(s=>(s.examples||[]).forEach(x=>{ if(x.ru) x.ru=restress(x.ru); }));
   (obj.idioms||[]).forEach(x=>{ if(x.ru) x.ru=restress(x.ru); });
   (obj.forms||[]).forEach(f=>{ if(f.value) f.value=restress(f.value); });
+  // 표제어가 검증 데이터(대조표)에 있는지 기록 → 없으면 화면에 '강세 미검증' 표시
+  const hk = String(obj.headword||"").replace(/́/g,"").toLowerCase();
+  obj.hwOK = !!(hk && STRESS.has(hk));
   return obj;
+}
+function multiVowel(w){
+  return ((String(w||"").replace(/́/g,"").toLowerCase().match(/[аеёиоуыэюя]/g)||[]).length) >= 2;
 }
 
 /* 찾아본 낱말을 이 기기에 남겨 둔다 (인터넷 없이 다시 열기 위해) */
@@ -590,6 +606,7 @@ function render(d, term, built, ai, meta){
       ${d.suggest?`<div style="margin-top:8px"><button class="seed">${esc(d.suggest)}</button></div>`:""}</div>`;
     setHead(""); return;
   }
+  const unv = ai && d.hwOK===false && multiVowel(d.headword||term);   // 검증 데이터에 없는 낱말
   const senses=(d.senses||[]).map((s,i)=>`
     <li class="sense">
       <span class="num">${i+1}</span>
@@ -610,9 +627,12 @@ function render(d, term, built, ai, meta){
         ${d.pron?`<span class="pron">[${esc(d.pron)}]</span>`:""}
         ${d.pos?`<span class="pos">${esc(d.pos)}</span>`:""}
         ${ai?`<span class="ai-badge" title="AI가 풀어 쓴 상세 뜻풀이입니다">AI 상세</span>`:""}
+        ${unv?`<span class="unv-badge" title="검증 데이터에 없어 AI가 추정한 강세입니다">강세 미검증</span>`:""}
       </div>
       ${d.gram?`<div class="gram">${esc(d.gram)}${d.pos_ko?` · ${esc(d.pos_ko)}`:""}</div>`:""}
       ${timingLine(meta)}
+      ${unv?`<div class="verify">이 낱말은 검증 데이터에 없어 강세가 정확하지 않을 수 있어요.
+        <a href="https://ru.wiktionary.org/wiki/${encodeURIComponent((d.headword||term).replace(/́/g,""))}" target="_blank" rel="noopener">↗ Wiktionary에서 확인</a></div>`:""}
       <ol class="senses">${senses}</ol>
       ${(d.idioms||[]).length?`<section class="block"><h2>관용 표현</h2>
         ${d.idioms.map(x=>`<div class="idiom"><div class="ex-ru">${linkify(x.ru)}</div><div class="ex-ko">${esc(x.ko)}</div></div>`).join("")}

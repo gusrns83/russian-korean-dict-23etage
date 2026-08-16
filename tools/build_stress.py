@@ -19,12 +19,12 @@ for line in open("ru_50k.txt", encoding="utf-8"):
 def common(key): return key.replace("ё","е") in freq
 
 m = {}   # key -> set(accented)
-def add(tok):
+def add(tok, require_freq):
     tok = acc(tok).lower()
     if not tok or tok.count("́") != 1 or not CYR.match(tok):
         return
     key = deacc(tok)
-    if not common(key):        # 빈도 목록에 있는 낱말만
+    if require_freq and not common(key):   # 굴절형은 빈도 목록에 있는 것만
         return
     m.setdefault(key, set()).add(tok)
 
@@ -32,12 +32,12 @@ for fn in FILES:
     with open(fn, encoding="utf-8") as f:
         r = csv.DictReader(f, delimiter="\t")
         for row in r:
-            add(row.get("accented",""))
+            add(row.get("accented",""), False)     # 표제어(원형)는 전체 수록
             for col, val in row.items():
                 if col in SKIP or not isinstance(val, str) or not val: continue
                 # 한 칸에 대안형이 여럿일 수 있어 키릴 낱말 단위로 쪼갠다
                 for piece in re.findall("[а-яёА-ЯЁ'́]+", val):
-                    add(piece)
+                    add(piece, True)               # 굴절형은 빈도로 거른다
 
 out = {k: next(iter(v)) for k, v in m.items() if len(v) == 1}   # 유일한 것만
 json.dump(out, open("../stress.json","w",encoding="utf-8"),
