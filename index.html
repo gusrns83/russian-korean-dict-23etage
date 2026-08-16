@@ -240,6 +240,24 @@
     text-decoration:underline;text-underline-offset:3px;
   }
   .switch-src button:hover,.switch-src button:focus{color:var(--red);outline:none;}
+
+  /* ── 한러(한국어→러시아어) 결과 목록 ── */
+  .revlist{list-style:none;margin:8px 0 0;padding:0;}
+  .revlist li{border-top:1px solid var(--rule);}
+  .revlist li:first-child{border-top:0;}
+  .revlist button{
+    display:flex;gap:12px;align-items:baseline;width:100%;
+    border:0;background:transparent;cursor:pointer;text-align:left;padding:10px 2px;
+  }
+  .revlist .rw{
+    flex:0 0 auto;font-family:"Old Standard TT",serif;font-size:20px;
+    color:var(--red);white-space:nowrap;
+  }
+  .revlist button:hover .rw,.revlist button:focus .rw{text-decoration:underline;}
+  .revlist button:focus{outline:none;}
+  .revlist .rg{
+    font-family:"Nanum Myeongjo",serif;font-size:14px;color:var(--ink-soft);line-height:1.5;
+  }
 </style>
 </head>
 <body>
@@ -264,7 +282,7 @@
   <main id="out">
     <div class="msg">
       러시아어 낱말을 넣으면 <b>강세·품사·여러 갈래의 뜻·예문</b>을 종이 사전처럼 펼쳐 보여줍니다.
-      한국어로 찾아도 됩니다. 예문 속 낱말을 누르면 그 낱말로 이어서 찾아갑니다.
+      한국어로 찾으면 뜻이 맞는 러시아어 낱말들을 모아 보여 줍니다(한러). 예문 속 낱말을 누르면 그 낱말로 이어서 찾아갑니다.
       자주 쓰는 낱말은 이 책 안에 이미 실려 있어, 인터넷 없이도 곧바로 열립니다.
       <div style="margin-top:10px">
         <button class="seed">книга</button><button class="seed">идти</button>
@@ -400,6 +418,50 @@ async function ask(term){
   throw last || new Error("연결하지 못했습니다");
 }
 
+/* 한국어 입력인지(한글 있고 키릴 없음) */
+function isKorean(s){ return /[가-힣]/.test(s) && !/[а-яА-ЯёЁ]/.test(s); }
+
+/* 한러: 수록 사전의 한국어 뜻을 거꾸로 뒤져 뜻이 맞는 러시아어 낱말들을 찾는다 */
+function reverseSearch(q){
+  q=(q||"").trim(); if(!q) return [];
+  const ents=BOOK.entries, seen=new Set(), scored=[];
+  for(const key in ents){
+    const e=ents[key], senses=e.senses||[];
+    let score=0;
+    for(const s of senses){
+      if(!s.gloss) continue;
+      const toks=s.gloss.split(/[\s,·;()／/]+/).filter(Boolean);
+      const sc = toks.includes(q) ? 2 : (s.gloss.indexOf(q)>=0 ? 1 : 0);
+      if(sc>score) score=sc;
+    }
+    if(score>0){
+      const hw=e.headword||key;
+      if(seen.has(hw)) continue; seen.add(hw);
+      scored.push({headword:hw, stressed:e.stressed||hw,
+        gloss:senses.map(s=>s.gloss).filter(Boolean).join("; "), score});
+    }
+  }
+  scored.sort((a,b)=>b.score-a.score);   // 정확 일치 우선, 나머지는 빈도 순 유지
+  return scored.slice(0,50);
+}
+
+function renderReverse(q, results){
+  setHead("");
+  const items=results.map(r=>`<li><button type="button" data-go="${esc(r.headword)}">
+      <span class="rw">${esc(r.stressed||r.headword)}</span>
+      <span class="rg">${esc(r.gloss)}</span>
+    </button></li>`).join("");
+  out.innerHTML=`<article class="entry">
+    <div class="head"><span class="word">${esc(q)}</span><span class="ai-badge" title="한국어→러시아어 찾기">한러</span></div>
+    <div class="gram">뜻이 맞는 러시아어 낱말 ${results.length}${results.length>=50?"+":""}개</div>
+    <ul class="revlist">${items}</ul>
+    <div class="switch-src"><button type="button" data-ai="${esc(q)}">AI로 대표 낱말 찾기</button></div>
+  </article>`;
+  histAdd(q);
+  $("#pageno").textContent = `— ${++page} —`;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
 async function lookup(term){
   term=(term||"").trim();
   if(!term) return;
@@ -414,12 +476,18 @@ async function lookup(term){
 
   if(built){ render(built, term, true); return; }
 
+  // 한국어 입력 → 한러: 먼저 수록 사전에서 오프라인으로 찾는다
+  if(isKorean(term)){
+    const results = reverseSearch(term);
+    if(results.length){ renderReverse(term, results); return; }
+  }
+
   if(!navigator.onLine){
     out.innerHTML='<div class="msg">이 사전에 아직 없는 낱말입니다. 인터넷이 연결되면 새 낱말도 찾아볼 수 있습니다.</div>';
     return;
   }
 
-  await runAI(term, "책장을 넘기는 중…");
+  await runAI(term, isKorean(term) ? "한러 낱말을 찾는 중…" : "책장을 넘기는 중…");
 }
 
 /* AI(서버 창구)로 상세 뜻풀이를 받아 그린다. 결과는 서버에 자동 저장된다. */
@@ -514,6 +582,10 @@ document.addEventListener("click",e=>{
   if(e.target.dataset && e.target.dataset.hist) lookup(e.target.dataset.hist);
   if(e.target.dataset && e.target.dataset.deep) runAI(e.target.dataset.deep);
   if(e.target.dataset && e.target.dataset.book) showBook(e.target.dataset.book);
+  const goBtn = e.target.closest && e.target.closest("[data-go]");
+  if(goBtn){ lookup(goBtn.dataset.go); return; }
+  const aiBtn = e.target.closest && e.target.closest("[data-ai]");
+  if(aiBtn){ runAI(aiBtn.dataset.ai); return; }
 });
 
 /* AI 기본값 대신 책에 실린 원래 뜻풀이를 한 번 보여 준다(저장본은 그대로 유지) */
