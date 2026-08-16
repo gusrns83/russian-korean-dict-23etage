@@ -268,6 +268,10 @@
     color:var(--ink-soft);margin:2px 0 10px;line-height:1.5;
   }
   .verify a{color:var(--red);text-decoration:underline;text-underline-offset:2px;white-space:nowrap;}
+  .obj-note{
+    font-family:"PT Sans Narrow",sans-serif;font-size:12.5px;letter-spacing:.02em;
+    color:var(--ink-soft);margin:2px 0 6px;
+  }
   .timing{
     font-family:"PT Sans Narrow",sans-serif;font-size:11.5px;letter-spacing:.04em;
     color:var(--ink-soft);margin:2px 0 8px;
@@ -307,7 +311,7 @@
     <div class="sub">Русско-корейский учебный словарь</div>
     <div class="search">
       <input id="q" type="text" placeholder="слово / 낱말" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
-      <button id="cam" class="cam" type="button" title="사진으로 낱말 찾기" aria-label="사진으로 낱말 찾기">📷</button>
+      <button id="cam" class="cam" type="button" title="사진으로 낱말·사물 찾기" aria-label="사진으로 낱말·사물 찾기">📷</button>
       <button id="trans" class="cam" type="button" title="사진 구간 번역" aria-label="사진 구간 번역">🖍️</button>
       <button id="go">찾기</button>
     </div>
@@ -326,7 +330,7 @@
     <div class="msg">
       러시아어 낱말을 넣으면 <b>강세·품사·여러 갈래의 뜻·예문</b>을 종이 사전처럼 펼쳐 보여줍니다.
       한국어로 찾으면 뜻이 맞는 러시아어 낱말들을 모아 보여 줍니다(한러). 예문 속 낱말을 누르면 그 낱말로 이어서 찾아갑니다.
-      책·간판 속 러시아어는 <b>📷 버튼</b>으로 찍어서 찾을 수 있습니다.
+      <b>📷 버튼</b>으로 책·간판 속 러시아어를 찍어 찾거나, 사물을 찍으면 그 사물의 러시아어 낱말을 알려 줍니다. <b>🖍️ 버튼</b>은 사진 속 구간을 골라 번역합니다.
       자주 쓰는 낱말은 이 책 안에 이미 실려 있어, 인터넷 없이도 곧바로 열립니다.
       <div style="margin-top:10px">
         <button class="seed">книга</button><button class="seed">идти</button>
@@ -823,6 +827,7 @@ function render(d, term, built, ai, meta){
         ${ai?`<span class="ai-badge" title="AI가 풀어 쓴 상세 뜻풀이입니다">AI 상세</span>`:""}
         ${unv?`<span class="unv-badge" title="검증 데이터에 없어 AI가 추정한 강세입니다">강세 미검증</span>`:""}
       </div>
+      ${d.kind==="object"&&d.seen?`<div class="obj-note">📷 사진 속 사물: ${esc(d.seen)}</div>`:""}
       ${d.gram?`<div class="gram">${esc(d.gram)}${d.pos_ko?` · ${esc(d.pos_ko)}`:""}</div>`:""}
       ${timingLine(meta)}
       ${unv?`<div class="verify">이 낱말은 검증 데이터에 없어 강세가 정확하지 않을 수 있어요.
