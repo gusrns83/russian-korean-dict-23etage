@@ -1,5 +1,5 @@
 /* 조군 러한사전 서비스 워커 — 앱 껍데기와 글꼴을 담아두어 인터넷 없이도 열리게 한다. */
-const CACHE = "ruko-v20";
+const CACHE = "ruko-v21";
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./words.json"
